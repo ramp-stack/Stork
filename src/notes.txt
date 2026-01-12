@@ -1,0 +1,25 @@
+Canvas size 
+
+
+impl Layout for CanvasLayout {
+    fn request_size(&self, _children: Vec<SizeRequest>) -> SizeRequest {
+        SizeRequest::new(0.0, 0.0, f32::MAX, f32::MAX)
+    }
+
+    fn build(&self, size: (f32, f32), children: Vec<SizeRequest>) -> Vec<Area> {
+        //TODO: 1. create safe areas to enforce 16:9 ratio
+        //TODO: 2. scale all the children so that it fits inside 16:9 area with a size of 3840×2160
+
+        self.canvas_size.set(size);
+        
+        if self.offsets.len() != children.len() {
+            panic!("CanvasLayout does not have the same number of offsets as children!");
+        }
+        self.offsets.iter().copied().zip(children).map(|(offset, child)|
+            Area {
+                offset,
+                size: child.get((f32::MAX, f32::MAX))  
+            }
+        ).collect()
+    }
+}

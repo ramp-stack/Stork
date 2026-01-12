@@ -1,0 +1,12 @@
+[package]
+name = "stork"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+graph = "0.3.1"
+image = "0.25.9"
+#pelican_ui = { path = "../pelican_ui" }
+prism = { path = "../prism", package = "prism2"}
+serde_json = "1.0.145"
+wgpu_canvas = "4.1.3"
