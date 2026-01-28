@@ -825,15 +825,7 @@ Key::Character("w".to_string().into())
 Key::Character("a".to_string().into())
 Key::Character("s".to_string().into())
 Key::Character("d".to_string().into())
-Key::Character("space".to_string().into())
-Key::ArrowUp
-Key::ArrowDown
-Key::ArrowLeft
-Key::ArrowRight
-Key::Enter
-Key::Escape
-Key::Shift
-Key::Control
+Key::Character(" ".to_string().into()) //Spacebar input is just empty space
 ```
 
 ## Physics
