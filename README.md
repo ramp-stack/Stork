@@ -601,17 +601,6 @@ Location::OnTarget {
 
 Reference points on objects for positioning.
 ```rust
-Anchor::TopLeft        // Top-left corner
-Anchor::TopCenter      // Top edge, centered
-Anchor::TopRight       // Top-right corner
-Anchor::CenterLeft     // Left edge, centered vertically
-Anchor::Center         // Center of object
-Anchor::CenterRight    // Right edge, centered vertically
-Anchor::BottomLeft     // Bottom-left corner
-Anchor::BottomCenter   // Bottom edge, centered
-Anchor::BottomRight    // Bottom-right corner
-
-// Custom anchor
 Anchor { x: 0.5, y: 0.5 }  // Center (0.0-1.0 range)
 Anchor { x: 0.25, y: 0.75 } // 25% from left, 75% from top
 ```
