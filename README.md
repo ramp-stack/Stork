@@ -847,28 +847,6 @@ The engine automatically handles physics every frame:
 5. **Object Collision**: Automatic detection between all objects
 6. **Boundary Collision**: Detection when hitting canvas edges
 
-### Physics Tips
-```rust
-// Good platformer settings
-gravity: 1.2
-resistance: (0.98, 0.98)
-
-// Ice physics (slides a lot)
-resistance: (0.99, 0.99)
-
-// Sticky ground (stops fast)
-resistance: (0.8, 0.8)
-
-// No friction
-resistance: (1.0, 1.0)
-
-// Instant stop
-resistance: (0.0, 0.0)
-
-// Movement directions
-(+x, +y) = right, down
-(-x, -y) = left, up
-```
 
 ## Complete Example
 ```rust
