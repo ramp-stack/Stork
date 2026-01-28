@@ -770,15 +770,51 @@ GameEvent::Tick {
 ```
 
 ### GameEvent::Custom
-Trigger custom named events.
+Trigger custom named events with your own logic.
 ```rust
-GameEvent::Custom {
-    name: "level_complete".to_string(),
-    target: Target::ById("player".to_string())
-}
+// Define a custom event
+canvas.add_event(
+    GameEvent::Custom {
+        name: "spawn_wave".to_string(),
+        target: Target::ById("game_manager".to_string())
+    },
+    Target::ById("game_manager".to_string())
+);
 
-// Trigger manually:
-canvas.trigger_custom_event("level_complete");
+// Set up custom event handler with your own code
+canvas.on_custom("spawn_wave", |canvas| {
+    // Your custom logic here - anything you want!
+    for i in 0..5 {
+        let x = 100.0 + (i as f32 * 200.0);
+        let y = (i as f32 * 50.0).sin() * 100.0 + 500.0;  // Wave pattern
+        
+        canvas.run(Action::Spawn {
+            object: Box::new(create_enemy(x, y)),
+            location: Location::Position((x, y))
+        });
+    }
+    
+    // Do math, check conditions, spawn objects, etc.
+    let total_enemies = canvas.get_target_indices(&Target::ByTag("enemies".to_string())).len();
+    if total_enemies > 10 {
+        canvas.run(Action::Remove {
+            target: Target::ByTag("powerups".to_string())
+        });
+    }
+});
+
+// Trigger it anywhere
+canvas.trigger_custom_event("spawn_wave");
+
+// Example: Timer-based custom event
+let mut timer = 0;
+canvas.on_tick(move |canvas| {
+    timer += 1;
+    if timer >= 180 {  // Every 3 seconds
+        timer = 0;
+        canvas.trigger_custom_event("spawn_wave");
+    }
+});
 ```
 
 ## Keys
