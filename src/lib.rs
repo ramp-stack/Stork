@@ -70,7 +70,7 @@ pub use crystalline::{
     PhysicsMaterial, PhysicsConfig, PhysicsQuality,
     CrystallinePhysics, PhysicsBody, PhysicsStepResult, BodyUpdate,
     ParticleSystem, ParticleState, ParticleStepResult,
-    Emitter, EmitterBuilder, Particle, CollisionResponse,
+    Emitter, EmitterBuilder, Particle, CollisionResponse, ParticleShape,
 };
 
 pub use rounded_box::{
@@ -143,7 +143,7 @@ pub mod prelude {
         PhysicsMaterial, PhysicsConfig, PhysicsQuality,
         CrystallinePhysics, PhysicsBody, PhysicsStepResult, BodyUpdate,
         ParticleSystem, ParticleState, ParticleStepResult,
-        Emitter, EmitterBuilder, Particle, CollisionResponse,
+        Emitter, EmitterBuilder, Particle, CollisionResponse, ParticleShape,
     };
 
     pub use crate::rounded_box::{
