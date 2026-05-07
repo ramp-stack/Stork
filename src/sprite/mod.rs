@@ -140,16 +140,16 @@ pub(crate) fn generate_planet_rgba(radius: u32, r: u8, g: u8, b: u8, brightness_
 }
 
 pub fn load_image(bytes: &[u8]) -> Image {
-    let rgba = image::load_from_memory(bytes)
-        .expect("quartz: cannot decode image from bytes")
+    let rgba = image::load_from_memory_with_format(bytes, image::ImageFormat::Png)
+        .expect("quartz: failed to decode PNG")
         .into_rgba8();
     let (w, h) = (rgba.width() as f32, rgba.height() as f32);
     make_image(rgba, w, h)
 }
 
 pub fn load_image_sized(bytes: &[u8], w: f32, h: f32) -> Image {
-    let rgba = image::load_from_memory(bytes)
-        .expect("quartz: cannot decode image from bytes")
+    let rgba = image::load_from_memory_with_format(bytes, image::ImageFormat::Png)
+        .expect("quartz: failed to decode PNG")
         .into_rgba8();
     make_image(rgba, w, h)
 }
