@@ -16,10 +16,15 @@ src/
     conditions.rs           evaluate_condition(), typed var getters/modifiers
     helpers.rs              tag queries, object pool, image cache, orbit math
     physics.rs              collision detection/resolution, object update loop
-    physics_bridge.rs       Crystalline physics bridge — public Canvas API
+    gravity.rs              planet gravity system (directional gravity, landings, auto-align)
+    crystalline_bridge.rs   Crystalline physics bridge — public Canvas API
     events.rs               OnEvent impl, tick loop, canvas_size, screen_to_virtual
     watch.rs                watch_file, watch_source
     location.rs             Location::resolve_position
+
+  plugin/
+    mod.rs                  QuartzPlugin trait, PluginRegistry — see plugin authoring guide
+    <plugin_name>/          optional plugin directory (external repo; see that plugin's README)
 
   types/
     mod.rs                  re-exports everything flat (no logic) — includes ScreenPin
@@ -497,7 +502,7 @@ Canvas::clear_image_cache()
   Clear the entire image cache.
 
 --------------------------------------------------------------------------------
-  CANVAS — Crystalline Physics Bridge  (canvas/physics_bridge.rs)
+  CANVAS — Crystalline Physics Bridge  (canvas/crystalline_bridge.rs)
 --------------------------------------------------------------------------------
 
 Canvas::enable_crystalline()
@@ -539,6 +544,10 @@ Canvas::is_in_gravity_field(name: &str) -> bool
 
 Canvas::is_in_any_gravity_field(name: &str) -> bool
   True if the object is within any planet's gravity range.
+
+  NOTE: Advanced feature modules (for example rope/grapple systems) are provided
+  by optional plugins. Dispatch plugin commands through Action::PluginCall.
+  See: MODULE: Plugin System below.
 
 --------------------------------------------------------------------------------
   CANVAS — Internal (pub(crate)) — called automatically each tick
@@ -737,6 +746,8 @@ Condition  (enum, Debug, Clone)
   HasDominantPlanet(Target)      object has a closest-surface planet
   DominantPlanetIs(Target, Target)  object's dominant planet matches
   InAnyGravityField(Target)      object is in any planet's gravity field
+  Plugin { name: String, arg: Option<String> }
+                             delegate to a named plugin's on_condition hook
 
   Condition::expr(s: impl Into<String>) -> Condition
   Condition::expr_checked(s: impl Into<String>) -> Result<Condition, String>
@@ -921,6 +932,10 @@ Action builder methods (all return Action):
   Action::camera_zoom_punch(amount, duration)
   Action::set_align_to_slope(target, enabled)
   Action::set_align_to_slope_speed(target, value)
+  Action::PluginCall { name: String, payload: Arc<dyn Any + Send + Sync> }
+    Dispatch a typed command struct to the named plugin (on_call hook).
+  Action::RunPlugin { name: String, data: String }
+    Dispatch a plain-string command to the named plugin (on_action hook).
 
 --------------------------------------------------------------------------------
   MODULE: GameEvent  (types/event.rs)
@@ -1532,6 +1547,120 @@ ImageCache::retain(f: impl FnMut(&str, &mut Image) -> bool)
 
 ================================================================================
   END OF CORE API REFERENCE
+================================================================================
+
+================================================================================
+  MODULE: Plugin System  (plugin/)
+================================================================================
+
+Plugins extend the engine with domain-specific behaviour that runs inside the
+tick loop without coupling to the engine core. Plugins are optional and are
+not guaranteed to be installed with a default Quartz checkout.
+
+The plugin/ directory is intentionally git-ignored in the quartz repo — each
+plugin has its own version history and is not a sub-module of quartz.
+
+--------------------------------------------------------------------------------
+  REGISTERING A PLUGIN
+--------------------------------------------------------------------------------
+
+  use quartz::prelude::*;
+  use my_plugin::MyPlugin;
+
+  canvas.add_plugin(Box::new(MyPlugin::new()));
+
+Canvas::add_plugin(plugin: Box<dyn QuartzPlugin>)
+  Register a plugin. on_init is called immediately on registration.
+
+Canvas::get_plugin<T: QuartzPlugin + 'static>(name: &str) -> Option<&T>
+Canvas::get_plugin_mut<T: QuartzPlugin + 'static>(name: &str) -> Option<&mut T>
+  Access a registered plugin by name with a typed downcast.
+
+Canvas::has_plugin(name: &str) -> bool
+  True if a plugin with this name is registered.
+
+Canvas::remove_plugin(name: &str)
+  Remove a plugin by name.
+
+--------------------------------------------------------------------------------
+  DISPATCHING COMMANDS TO A PLUGIN
+--------------------------------------------------------------------------------
+
+Typed command struct (on_call):
+
+  use std::sync::Arc;
+
+  #[derive(Clone, Debug)]
+  pub enum MyPluginCommand {
+    SetValue { target: Target, value: f32 },
+  }
+
+  canvas.run(Action::PluginCall {
+    name:    "my_plugin".into(),
+    payload: Arc::new(MyPluginCommand::SetValue {
+      target: Target::ByName("player".into()),
+      value:  0.001,
+    }),
+  });
+
+Plain-string command (on_action):
+
+  canvas.run(Action::RunPlugin {
+      name: "my_plugin".into(),
+      data: "reload".into(),
+  });
+
+Plugin condition (on_condition):
+
+  Condition::Plugin { name: "my_plugin".into(), arg: None }
+
+--------------------------------------------------------------------------------
+  QuartzPlugin TRAIT  (plugin/mod.rs)
+--------------------------------------------------------------------------------
+
+All hooks have default no-op / false implementations. Only override what you need.
+
+  fn name(&self) -> &str
+    Unique identifier string. Must match the name used in Action::PluginCall.
+
+  fn on_init(&mut self, canvas: &mut Canvas)
+    Called once immediately after canvas.add_plugin(). One-time setup only.
+
+  fn on_update(&mut self, canvas: &mut Canvas, dt: f32)
+    Called every frame BEFORE the physics step.
+
+  fn on_post_update(&mut self, canvas: &mut Canvas, dt: f32)
+    Called every frame AFTER the physics step.
+
+  fn on_post_solve(&mut self, canvas: &mut Canvas, dt: f32)
+    Called after Crystalline solver results are written back to game objects.
+    Correct place for position-level constraint corrections (XPBD grapple).
+
+  fn on_action(&mut self, canvas: &mut Canvas, data: &str) -> bool
+    Called for Action::RunPlugin targeting this plugin. Return true if handled.
+
+  fn on_call(&mut self, canvas: &mut Canvas, payload: &dyn Any) -> bool
+    Called for Action::PluginCall targeting this plugin.
+    Downcast: payload.downcast_ref::<MyCommand>(). Return true if handled.
+
+  fn on_condition(&self, canvas: &Canvas, arg: Option<&str>) -> bool
+    Called for Condition::Plugin targeting this plugin. Return the bool result.
+
+  OPTIONAL PLUGIN PACKAGES
+--------------------------------------------------------------------------------
+
+Quartz supports optional plugin packages, but this API reference does not list
+plugin-specific command enums or feature APIs. Those details live in each
+plugin repository's own README/API docs.
+
+What remains stable in Quartz core:
+  - QuartzPlugin trait and hook contract
+  - Canvas plugin registration/query/removal methods
+  - Action::PluginCall / Action::RunPlugin dispatch path
+  - Condition::Plugin evaluation hook
+
+================================================================================
+  END OF PLUGIN REFERENCE
 ================================================================================
 
 ================================================================================

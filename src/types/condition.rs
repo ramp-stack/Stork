@@ -36,9 +36,10 @@ pub enum Condition {
     DominantPlanetIs(Target, Target),
     InAnyGravityField(Target),
 
-    // -- Grapple / constraint conditions ---
-    HasGrapple(Target),
-    NoGrapple(Target),
+    // -- Plugin conditions ---
+    /// Ask the named plugin to evaluate a condition.
+    /// The plugin's `on_condition` handler receives `arg` and returns a bool.
+    Plugin { name: String, arg: Option<String> },
 }
 
 impl Condition {

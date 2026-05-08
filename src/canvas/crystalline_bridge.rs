@@ -1,5 +1,5 @@
 use super::core::Canvas;
-use crate::crystalline::{
+use crystalline::{
     CrystallinePhysics, ParticleSystem, PhysicsBody, PhysicsConfig,
     PhysicsMaterial, PhysicsQuality, PhysicsStepResult,
     CrystallineCollisionMode, CollisionShape as CrysCollisionShape,
@@ -240,7 +240,7 @@ impl Canvas {
     }
 
     /// Returns particle positions from the last step (for rendering).
-    pub fn particle_positions(&self) -> &[crate::crystalline::ParticleState] {
+    pub fn particle_positions(&self) -> &[crystalline::ParticleState] {
         &self.last_particle_states
     }
 
@@ -252,127 +252,9 @@ impl Canvas {
     /// Spawn a one-shot burst of particles from an emitter definition.
     /// Unlike `spawn_emitter`, this does NOT add a persistent emitter —
     /// particles are created immediately and then dissipate on their own.
-    pub fn spawn_particle_burst(&mut self, emitter: &crate::crystalline::Emitter, count: usize) {
+    pub fn spawn_particle_burst(&mut self, emitter: &crystalline::Emitter, count: usize) {
         if let Some(ps) = &mut self.particle_system {
             ps.spawn_burst_from_emitter(emitter, count);
-        }
-    }
-
-    // -- Grapple constraint system -----------------------------------------
-
-    /// Attach a grapple constraint to a named game object.
-    /// If the object already has a grapple, it is replaced.
-    pub fn attach_grapple(&mut self, name: &str, mut grapple: crate::constraints::GrappleConstraint) {
-        // If anchor_object is set, resolve its current position as initial anchor
-        if let Some(anchor_name) = &grapple.anchor_object {
-            if let Some(anchor_obj) = self.get_game_object(anchor_name) {
-                grapple.anchor = (
-                    anchor_obj.position.0 + anchor_obj.size.0 * 0.5,
-                    anchor_obj.position.1 + anchor_obj.size.1 * 0.5,
-                );
-            }
-        }
-        self.grapple_constraints.insert(name.to_string(), grapple);
-        // Wake the body so the grapple takes effect immediately
-        self.wake_body(name);
-    }
-
-    /// Release (remove) the grapple from a named game object.
-    pub fn release_grapple(&mut self, name: &str) {
-        self.grapple_constraints.remove(name);
-    }
-
-    /// Check if an object has an active grapple attached.
-    pub fn has_grapple(&self, name: &str) -> bool {
-        self.grapple_constraints.get(name).map_or(false, |g| g.active)
-    }
-
-    /// Get a reference to an object's grapple constraint (if any).
-    pub fn get_grapple(&self, name: &str) -> Option<&crate::constraints::GrappleConstraint> {
-        self.grapple_constraints.get(name)
-    }
-
-    /// Mutable access to an object's grapple constraint (advanced).
-    pub fn get_grapple_mut(&mut self, name: &str) -> Option<&mut crate::constraints::GrappleConstraint> {
-        self.grapple_constraints.get_mut(name)
-    }
-
-    /// Enforce grapple constraints by applying position/velocity corrections
-    /// directly to the store. Called AFTER the physics solver step so
-    /// corrections override the solver's output (XPBD-style).
-    pub(crate) fn enforce_grapple_constraints(&mut self) {
-        if self.grapple_constraints.is_empty() {
-            return;
-        }
-
-        // First, update anchors for grapples attached to objects
-        let anchor_updates: Vec<(String, (f32, f32))> = self.grapple_constraints.iter()
-            .filter_map(|(name, grapple)| {
-                let anchor_name = grapple.anchor_object.as_ref()?;
-                let anchor_obj = self.store.name_to_index.get(anchor_name.as_str())
-                    .and_then(|&idx| self.store.objects.get(idx))?;
-                Some((name.clone(), (
-                    anchor_obj.position.0 + anchor_obj.size.0 * 0.5,
-                    anchor_obj.position.1 + anchor_obj.size.1 * 0.5,
-                )))
-            })
-            .collect();
-
-        for (name, anchor_pos) in anchor_updates {
-            if let Some(g) = self.grapple_constraints.get_mut(&name) {
-                g.anchor = anchor_pos;
-            }
-        }
-
-        // Solve each grapple and collect corrections
-        struct GrappleCorr {
-            idx: usize,
-            position: Option<(f32, f32)>,
-            velocity: Option<(f32, f32)>,
-        }
-        let mut corrections: Vec<GrappleCorr> = Vec::new();
-
-        let names: Vec<String> = self.grapple_constraints.keys().cloned().collect();
-        for name in &names {
-            let idx = match self.store.name_to_index.get(name.as_str()) {
-                Some(&i) => i,
-                None => continue,
-            };
-            let obj = match self.store.objects.get(idx) {
-                Some(o) => o,
-                None => continue,
-            };
-            let obj_center = (
-                obj.position.0 + obj.size.0 * 0.5,
-                obj.position.1 + obj.size.1 * 0.5,
-            );
-            let obj_vel = obj.momentum;
-            let half_w = obj.size.0 * 0.5;
-            let half_h = obj.size.1 * 0.5;
-
-            if let Some(grapple) = self.grapple_constraints.get_mut(name.as_str()) {
-                let correction = grapple.solve(obj_center, obj_vel);
-                if correction.applied() {
-                    // Convert center position back to top-left corner
-                    corrections.push(GrappleCorr {
-                        idx,
-                        position: correction.position.map(|(cx, cy)| (cx - half_w, cy - half_h)),
-                        velocity: correction.velocity,
-                    });
-                }
-            }
-        }
-
-        // Apply corrections directly to store objects
-        for corr in corrections {
-            if let Some(obj) = self.store.objects.get_mut(corr.idx) {
-                if let Some(pos) = corr.position {
-                    obj.position = pos;
-                }
-                if let Some(vel) = corr.velocity {
-                    obj.momentum = vel;
-                }
-            }
         }
     }
 
@@ -450,7 +332,7 @@ impl Canvas {
                     if !planet.tags.iter().any(|t| t == tag) { continue; }
                 }
 
-                if let Some((fx, fy, _pull)) = super::physics::compute_gravity_force(
+                if let Some((fx, fy, _pull)) = super::gravity::compute_gravity_force(
                     obj_cx, obj_cy,
                     obj_strength, obj_influence_mult, obj_falloff,
                     planet.cx, planet.cy, planet.radius, planet.strength,
@@ -474,7 +356,7 @@ impl Canvas {
                 let max_field_surf = dom_r * (obj_influence_mult - 1.0);
                 if max_field_surf > 0.0 {
                     let depth = 1.0 - (dom_surface_dist / max_field_surf).clamp(0.0, 1.0);
-                    1.0 - depth * super::physics::NESTED_GRAVITY_DAMPENING
+                    1.0 - depth * super::gravity::NESTED_GRAVITY_DAMPENING
                 } else {
                     1.0
                 }
@@ -580,16 +462,50 @@ impl Canvas {
         let bodies = build_physics_bodies(self);
 
         // Step solver.
-        if let Some(solver) = &mut self.crystalline {
-            let result = solver.step(delta_time, &bodies);
+        // Pull the result out of the if-let scope so that `self.crystalline`
+        // is no longer borrowed when we call apply_physics_result and the hooks.
+        let result_opt = if let Some(solver) = &mut self.crystalline {
+            Some(solver.step(delta_time, &bodies))
+        } else {
+            None
+        };
+
+        if let Some(result) = result_opt {
+            // Build a reverse index → name map for collision pair lookup.
+            // name_to_index is name→idx; we need idx→name.
+            let idx_to_name: std::collections::HashMap<usize, &str> = self.store
+                .name_to_index.iter()
+                .map(|(k, &v)| (v, k.as_str()))
+                .collect();
+
+            // Map collision pairs from store indices → object names before
+            // consuming the result. Stored on Canvas so plugins can read them
+            // in on_post_solve and on_post_update.
+            self.last_collision_pairs = result.collision_pairs.iter()
+                .filter_map(|(a, b)| {
+                    let na = idx_to_name.get(a)?.to_string();
+                    let nb = idx_to_name.get(b)?.to_string();
+                    Some((na, nb))
+                })
+                .collect();
+
             apply_physics_result(self, result);
+        } else {
+            self.last_collision_pairs.clear();
         }
 
-        // Enforce grapple constraints AFTER the solver step.
-        // Position-level correction: projects objects back onto the rope
-        // arc and strips outward radial velocity. Must happen after the
-        // solver integrates forces/velocity so corrections override.
-        self.enforce_grapple_constraints();
+        // ── Plugin on_post_solve hooks ────────────────────────────────────────
+        // Fires inside the crystalline step, after apply_physics_result().
+        // Plugins that need post-solve position corrections (custom constraints,
+        // grapple enforcement, extra restitution, etc.) implement this hook.
+        // Canvas::last_collision_pairs is available here.
+        {
+            let mut plugins = std::mem::take(&mut self.plugin_registry.plugins);
+            for plugin in &mut plugins {
+                plugin.on_post_solve(self, delta_time);
+            }
+            self.plugin_registry.plugins = plugins;
+        }
 
         // Re-sync emitter origins using the freshly-committed positions from
         // this frame's physics result. Without this second sync, particles
@@ -641,7 +557,7 @@ impl Canvas {
             .unwrap_or((0.0, 0.0));
 
         for ps in &self.last_particle_states {
-            use crate::crystalline::particles::types::ParticleShape;
+            use crystalline::ParticleShape;
             let (r, g, b, a) = ps.color;
             let s = ps.size * scale;
             let shape_type = match &ps.shape {

@@ -59,7 +59,8 @@ impl Canvas {
             emitter_locations:         HashMap::new(),
             particle_render_layers:    Vec::new(),
             render_order:              Vec::new(),
-            grapple_constraints:       HashMap::new(),
+            last_collision_pairs:      Vec::new(),
+            plugin_registry:           crate::plugin::PluginRegistry::new(),
         }
     }
 
@@ -106,6 +107,18 @@ impl Canvas {
         )
     }
 
+    /// Register a plugin with this canvas.
+    /// Plugins receive `on_update` and `on_post_update` callbacks every frame.
+    pub fn add_plugin(&mut self, mut plugin: impl crate::plugin::QuartzPlugin + 'static) {
+        plugin.on_init(self);
+        self.plugin_registry.plugins.push(Box::new(plugin));
+    }
+
+    /// Remove a registered plugin by name.
+    pub fn remove_plugin(&mut self, name: &str) {
+        self.plugin_registry.plugins.retain(|p| p.name() != name);
+    }
+
     pub fn add_game_object(&mut self, name: String, obj: GameObject) {
         let position = obj.position;
         self.layout.offsets.push(position);
@@ -134,6 +147,12 @@ impl Canvas {
     pub fn get_game_object_mut(&mut self, name: &str) -> Option<&mut GameObject> {
         self.store.name_to_index.get(name).copied()
             .and_then(move |i| self.store.objects.get_mut(i))
+    }
+
+    /// Returns the names of all game objects registered on this canvas.
+    /// Useful for plugins that need to iterate all objects each frame.
+    pub fn object_names(&self) -> &[String] {
+        &self.store.names
     }
 
     pub fn run(&mut self, action: Action) {
@@ -570,59 +589,28 @@ impl Canvas {
                 });
             }
 
-            // -- Grapple constraint actions --
-            Action::AttachGrapple { target, grapple } => {
-                for name in self.store.get_names(&target) {
-                    self.attach_grapple(&name, grapple.clone());
-                }
-            }
-            Action::ReleaseGrapple { target } => {
-                for name in self.store.get_names(&target) {
-                    self.release_grapple(&name);
-                }
-            }
-            Action::SetGrappleLength { target, value } => {
-                for name in self.store.get_names(&target) {
-                    if let Some(g) = self.grapple_constraints.get_mut(&name) {
-                        g.length = value.max(1.0);
+            // -- Plugin dispatch --
+            Action::RunPlugin { name, data } => {
+                // Take the plugins out, dispatch, then put back.
+                let mut plugins = std::mem::take(&mut self.plugin_registry.plugins);
+                for plugin in &mut plugins {
+                    if plugin.name() == name.as_str() {
+                        plugin.on_action(self, &data);
+                        break;
                     }
                 }
+                self.plugin_registry.plugins = plugins;
             }
-            Action::SetGrappleStiffness { target, value } => {
-                for name in self.store.get_names(&target) {
-                    if let Some(g) = self.grapple_constraints.get_mut(&name) {
-                        g.stiffness = value.clamp(0.0, 1.0);
+            Action::PluginCall { name, payload } => {
+                // Take the plugins out, dispatch, then put back.
+                let mut plugins = std::mem::take(&mut self.plugin_registry.plugins);
+                for plugin in &mut plugins {
+                    if plugin.name() == name.as_str() {
+                        plugin.on_call(self, payload.as_ref());
+                        break;
                     }
                 }
-            }
-            Action::SetGrappleDamping { target, value } => {
-                for name in self.store.get_names(&target) {
-                    if let Some(g) = self.grapple_constraints.get_mut(&name) {
-                        g.damping = value.clamp(0.0, 1.0);
-                    }
-                }
-            }
-            Action::SetGrappleAnchor { target, x, y } => {
-                for name in self.store.get_names(&target) {
-                    if let Some(g) = self.grapple_constraints.get_mut(&name) {
-                        g.anchor = (x, y);
-                        g.anchor_object = None;
-                    }
-                }
-            }
-            Action::SetGrappleAnchorObject { target, anchor_object } => {
-                for name in self.store.get_names(&target) {
-                    if let Some(g) = self.grapple_constraints.get_mut(&name) {
-                        g.anchor_object = Some(anchor_object.clone());
-                    }
-                }
-            }
-            Action::SetGrappleSwingBias { target, bias } => {
-                for name in self.store.get_names(&target) {
-                    if let Some(g) = self.grapple_constraints.get_mut(&name) {
-                        g.swing_bias = bias;
-                    }
-                }
+                self.plugin_registry.plugins = plugins;
             }
         }
     }
