@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-image = { version = "0.25.9", features = ["png"] }
+image = { version = "0.25.9", features = ["png", "jpeg"] }
 prism  = { package = "prism2", path = "../prism"}
 ramp  = { package = "ramp2", path = "../ramp"}
-wgpu_canvas = {path="../wgpu_canvas", default-features = false}
-crystalline = { path = "../crystalline" }
+wgpu_canvas = { path = "../wgpu_canvas" }
+rand = "0.8"
 rodio = "0.21.1"
 serde_json = "1.0.149"
 
