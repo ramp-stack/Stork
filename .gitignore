@@ -1,2 +1,6 @@
 /target
 /synful_testing
+/src/plugin/background
+/src/plugin/grapple
+/src/plugin/save_game
+/src/plugin/terrain_collision

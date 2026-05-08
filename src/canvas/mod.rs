@@ -3,10 +3,11 @@ pub mod actions;
 pub mod conditions;
 pub mod helpers;
 pub mod physics;
+pub(crate) mod gravity;
 pub mod events;
 pub mod watch;
 pub mod location;
-pub mod physics_bridge;
+pub mod crystalline_bridge;
 
 // Flatten the public surface: callers use `crate::canvas::Canvas` etc.
 pub use core::{Canvas, CanvasMode, CanvasLayout};

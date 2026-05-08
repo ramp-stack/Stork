@@ -13,12 +13,11 @@ pub mod scroll;
 pub mod canvas;
 pub(crate) mod file_watcher;
 pub mod expr;
-pub mod crystalline;
 pub mod rounded_box;
-pub mod constraints;
 pub mod assets;
 pub mod timer;
 pub mod json_layout;
+pub mod plugin;
 
 pub use std::sync::Arc;
 
@@ -70,7 +69,7 @@ pub use crystalline::{
     PhysicsMaterial, PhysicsConfig, PhysicsQuality,
     CrystallinePhysics, PhysicsBody, PhysicsStepResult, BodyUpdate,
     ParticleSystem, ParticleState, ParticleStepResult,
-    Emitter, EmitterBuilder, Particle, CollisionResponse,
+    Emitter, EmitterBuilder, Particle, CollisionResponse, ParticleShape,
 };
 
 pub use rounded_box::{
@@ -79,7 +78,7 @@ pub use rounded_box::{
     rounded_box, rounded_box_outline, rounded_box_bordered, rounded_box_gradient,
 };
 
-pub use constraints::{
+pub use plugin::grapple::{
     GrappleConstraint, GrappleCorrection, DistanceConstraint, SpringConstraint,
     SwingBias, solve_distance_constraint,
 };
@@ -87,6 +86,8 @@ pub use assets::ImageCache;
 pub use entropy::Entropy;
 pub use lerp::Lerp;
 pub use file_watcher::{Shared, SourceSettings, FromSource};
+
+pub use plugin::QuartzPlugin;
 
 pub use value::{
     Expr, Value, MathOp, CompOp,
@@ -139,11 +140,11 @@ pub mod prelude {
     pub use crate::sound::{SoundOptions, SoundHandle};
     pub use crate::expr::{parse_condition, parse_action};
 
-    pub use crate::crystalline::{
+    pub use crystalline::{
         PhysicsMaterial, PhysicsConfig, PhysicsQuality,
         CrystallinePhysics, PhysicsBody, PhysicsStepResult, BodyUpdate,
         ParticleSystem, ParticleState, ParticleStepResult,
-        Emitter, EmitterBuilder, Particle, CollisionResponse,
+        Emitter, EmitterBuilder, Particle, CollisionResponse, ParticleShape,
     };
 
     pub use crate::rounded_box::{
@@ -152,7 +153,7 @@ pub mod prelude {
         rounded_box, rounded_box_outline, rounded_box_bordered, rounded_box_gradient,
     };
 
-    pub use crate::constraints::{
+    pub use crate::plugin::grapple::{
         GrappleConstraint, GrappleCorrection, DistanceConstraint, SpringConstraint,
         SwingBias, solve_distance_constraint,
     };
@@ -161,6 +162,8 @@ pub mod prelude {
     pub use crate::entropy::Entropy;
     pub use crate::lerp::Lerp;
     pub use crate::file_watcher::{Shared, SourceSettings, FromSource};
+
+    pub use crate::plugin::QuartzPlugin;
 
     pub use crate::value::{
         Expr, Value, MathOp, CompOp,

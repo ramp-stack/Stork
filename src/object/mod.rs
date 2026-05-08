@@ -10,7 +10,7 @@ use prism::Context;
 use prism::canvas::{Image, ShapeType, Color};
 use crate::sprite::AnimatedSprite;
 use crate::types::{CollisionMode, GlowConfig, GravityFalloff, HighlightEffect};
-use crate::crystalline::PhysicsMaterial;
+use crystalline::PhysicsMaterial;
 use wgpu_canvas::{Area as CanvasArea, Item as CanvasItem};
 use std::cell::Cell;
 

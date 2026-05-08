@@ -11,8 +11,8 @@ use crate::camera::Camera;
 use crate::entropy::Entropy;
 use crate::file_watcher;
 use crate::value::Value;
-use crate::crystalline::{CrystallinePhysics, ParticleSystem, ParticleState};
-use crate::constraints::GrappleConstraint;
+use crystalline::{CrystallinePhysics, ParticleSystem, ParticleState};
+use crate::plugin::PluginRegistry;
 
 
 #[derive(Clone, Copy, Debug)]
@@ -133,8 +133,12 @@ pub struct Canvas {
     pub(crate) emitter_locations:         HashMap<String, crate::types::Location>,
     pub(crate) particle_render_layers:    Vec<i32>,
     pub(crate) render_order:              Vec<RenderSlot>,
-    /// Per-object grapple constraints. Key = game object name.
-    pub(crate) grapple_constraints:       HashMap<String, GrappleConstraint>,
+    /// Collision pairs detected by Crystalline in the most recent physics step.
+    /// Cleared at the start of each step. Available to plugins during
+    /// `on_post_solve` and `on_post_update`. Pairs are `(name_a, name_b)`.
+    pub last_collision_pairs:             Vec<(String, String)>,
+    /// Registered engine plugins. Not cloned (see PluginRegistry::clone).
+    pub(crate) plugin_registry:            PluginRegistry,
 }
 
 impl std::fmt::Debug for Canvas {

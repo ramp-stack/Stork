@@ -2,7 +2,7 @@ use prism::drawable::Drawable;
 use prism::canvas::{Image, Color};
 use prism::Context;
 use crate::types::{CollisionMode, GlowConfig, GravityFalloff, HighlightEffect, collision_layers};
-use crate::crystalline::PhysicsMaterial;
+use crystalline::PhysicsMaterial;
 use std::cell::Cell;
 
 use super::GameObject;

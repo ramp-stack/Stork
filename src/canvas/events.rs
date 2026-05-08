@@ -61,10 +61,28 @@ impl OnEvent for Canvas {
             self.process_hot_reloads(DELTA_TIME);
             self.update_objects(DELTA_TIME);
 
+            // ── Plugin on_update hooks (after game-object updates, before physics) ──
+            {
+                let mut plugins = std::mem::take(&mut self.plugin_registry.plugins);
+                for plugin in &mut plugins {
+                    plugin.on_update(self, DELTA_TIME);
+                }
+                self.plugin_registry.plugins = plugins;
+            }
+
             if self.crystalline.is_some() {
                 self.run_crystalline_step(DELTA_TIME);
             } else {
                 self.handle_collisions();
+            }
+
+            // ── Plugin on_post_update hooks (after physics step) ──────────────────
+            {
+                let mut plugins = std::mem::take(&mut self.plugin_registry.plugins);
+                for plugin in &mut plugins {
+                    plugin.on_post_update(self, DELTA_TIME);
+                }
+                self.plugin_registry.plugins = plugins;
             }
 
             self.handle_planet_landings();

@@ -216,12 +216,15 @@ impl Canvas {
                 })
             }
 
-            // -- Grapple conditions --
-            Condition::HasGrapple(target) => {
-                self.store.get_names(target).iter().any(|name| self.has_grapple(name))
-            }
-            Condition::NoGrapple(target) => {
-                self.store.get_names(target).iter().all(|name| !self.has_grapple(name))
+            // -- Plugin conditions --
+            Condition::Plugin { name, arg } => {
+                // Ask the named plugin synchronously. We use find+as_ref to
+                // avoid taking ownership, since on_condition takes &self.
+                let result = self.plugin_registry.plugins.iter()
+                    .find(|p| p.name() == name.as_str())
+                    .map(|p| p.on_condition(self, arg.as_deref()))
+                    .unwrap_or(false);
+                result
             }
         }
     }

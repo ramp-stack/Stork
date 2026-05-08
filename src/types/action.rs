@@ -2,84 +2,101 @@ use prism::canvas::{Color, Text};
 use crate::object::GameObject;
 use crate::value::{Expr, MathOp};
 use crate::sound::SoundOptions;
-use crate::crystalline::{PhysicsMaterial, PhysicsQuality, Emitter, CollisionResponse};
-use crate::constraints::{GrappleConstraint, SwingBias};
+use crystalline::{PhysicsMaterial, PhysicsQuality, Emitter, CollisionResponse};
+use crystalline::ParticleShape;
 use crate::camera::{FlashMode, FlashEase};
 use super::targeting::{Target, Location};
 use super::collision::CollisionMode;
 use super::condition::Condition;
+use std::sync::Arc;
 
 #[derive(Clone, Debug)]
 pub enum Action {
+
+    // ─── Object Transform ───────────────────────────────────────────────────
     ApplyMomentum { target: Target, value: (f32, f32) },
     SetMomentum   { target: Target, value: (f32, f32) },
-    Spawn         { object: Box<GameObject>, location: Location },
     SetResistance { target: Target, value: (f32, f32) },
-    Remove        { target: Target },
-    TransferMomentum { from: Target, to: Target, scale: f32 },
-    SetAnimation  { target: Target, animation_bytes: &'static [u8], fps: f32 },
-    Teleport      { target: Target, location: Location },
-    Show          { target: Target },
-    Hide          { target: Target },
-    Toggle        { target: Target },
-    Conditional   { condition: Condition, if_true: Box<Action>, if_false: Option<Box<Action>> },
-    Custom        { name: String },
-    SetVar        { name: String, value: Expr },
-    ModVar        { name: String, op: MathOp, operand: Expr },
-    Multi(Vec<Action>),
-    PlaySound     { path: String, options: SoundOptions },
     SetGravity    { target: Target, value: f32 },
     SetSize       { target: Target, value: (f32, f32) },
-    AddTag        { target: Target, tag: String },
-    RemoveTag     { target: Target, tag: String },
-    SetText       { target: Target, text: Text },
-    Expr(String),
     SetRotation   { target: Target, value: f32 },
-    SetPivot      { target: Target, x: f32, y: f32 },
-    SetSlope      { target: Target, left_offset: f32, right_offset: f32, auto_rotate: bool },
     AddRotation   { target: Target, value: f32 },
     ApplyRotation { target: Target, value: f32 },
+    SetPivot      { target: Target, x: f32, y: f32 },
+    SetSlope      { target: Target, left_offset: f32, right_offset: f32, auto_rotate: bool },
     SetSurfaceNormal { target: Target, nx: f32, ny: f32 },
-    SetCollisionMode { target: Target, mode: CollisionMode },
+    TransferMomentum { from: Target, to: Target, scale: f32 },
+
+    // ─── Object Lifecycle ───────────────────────────────────────────────────
+    Spawn  { object: Box<GameObject>, location: Location },
+    Remove { target: Target },
+    Show   { target: Target },
+    Hide   { target: Target },
+    Toggle { target: Target },
+
+    // ─── Visual ─────────────────────────────────────────────────────────────
+    SetAnimation  { target: Target, animation_bytes: &'static [u8], fps: f32 },
     SetGlow       { target: Target, color: Color, width: f32 },
     ClearGlow     { target: Target },
     SetTint       { target: Target, color: Color },
     ClearTint     { target: Target },
+    SetText       { target: Target, text: Text },
 
-    // -- Material (crystalline) ---
+    // ─── Teleport / Position ────────────────────────────────────────────────
+    Teleport      { target: Target, location: Location },
+
+    // ─── Tags & Collision ───────────────────────────────────────────────────
+    AddTag           { target: Target, tag: String },
+    RemoveTag        { target: Target, tag: String },
+    SetCollisionMode { target: Target, mode: CollisionMode },
+    SetCameraRelative { target: Target, enabled: bool },
+
+    // ─── Control Flow ───────────────────────────────────────────────────────
+    Conditional { condition: Condition, if_true: Box<Action>, if_false: Option<Box<Action>> },
+    Multi(Vec<Action>),
+
+    // ─── Variables & Scripting ──────────────────────────────────────────────
+    Custom  { name: String },
+    SetVar  { name: String, value: Expr },
+    ModVar  { name: String, op: MathOp, operand: Expr },
+    Expr(String),
+
+    // ─── Audio ──────────────────────────────────────────────────────────────
+    PlaySound { path: String, options: SoundOptions },
+
+    // ─── Physics (Crystalline) ───────────────────────────────────────────────
     SetMaterial      { target: Target, material: PhysicsMaterial },
     SetElasticity    { target: Target, value: f32 },
     SetFriction      { target: Target, value: f32 },
     SetDensity       { target: Target, value: f32 },
 
-    // -- Forces / impulses ---
+    // ─── Forces & Impulses ────────────────────────────────────────────────
     ApplyForce       { target: Target, fx: f32, fy: f32 },
     ApplyImpulse     { target: Target, ix: f32, iy: f32 },
 
-    // -- Position (ball_swing feedback) ---
+    // ─── Body Position ───────────────────────────────────────────────────
     SetPosition      { target: Target, x: f32, y: f32 },
-    SetCameraRelative { target: Target, enabled: bool },
 
-    // -- Body state ---
+    // ─── Body State ──────────────────────────────────────────────────────
     WakeBody         { target: Target },
     FreezeBody       { target: Target },
     UnfreezeBody     { target: Target },
 
-    // -- Per-body tuning ---
+    // ─── Per-Body Tuning ─────────────────────────────────────────────────
     SetCollisionLayer { target: Target, layer: u32 },
 
-    // -- Global physics ---
+    // ─── Global Physics ──────────────────────────────────────────────────
     SetPhysicsQuality { quality: PhysicsQuality },
     EnableCrystalline,
     DisableCrystalline,
 
-    // -- Particle lifecycle ---
+    // ─── Particles ───────────────────────────────────────────────────────
     SpawnEmitter     { emitter: Emitter },
     RemoveEmitter    { name: String },
     AttachEmitter    { emitter_name: String, target: Target, location: Option<Location> },
     DetachEmitter    { emitter_name: String },
 
-    // -- Emitter modification ---
+    // ─── Emitter Properties ──────────────────────────────────────────────
     SetEmitterRate          { name: String, value: f32 },
     SetEmitterLifetime      { name: String, value: f32 },
     SetEmitterVelocity      { name: String, value: (f32, f32) },
@@ -89,11 +106,22 @@ pub enum Action {
     SetEmitterGravityScale  { name: String, value: f32 },
     SetEmitterCollision     { name: String, value: CollisionResponse },
     SetEmitterRenderLayer   { name: String, value: i32 },
+    /// Fade particle size from spawn size to `value` over lifetime. Use `0.0` to taper to nothing.
+    SetEmitterSizeEnd           { name: String, value: f32 },
+    /// Fade particle colour from spawn colour to `value` over lifetime. `None` disables fade.
+    SetEmitterColorEnd          { name: String, value: Option<(u8, u8, u8, u8)> },
+    /// Set the rendered shape for newly emitted particles.
+    SetEmitterShape             { name: String, value: ParticleShape },
+    /// When `true`, each particle auto-rotates to face its velocity direction each frame.
+    SetEmitterAlignToVelocity   { name: String, value: bool },
+    /// When `true`, particles are distributed along the path the emitter travelled
+    /// this frame, eliminating gaps at high speed.
+    SetEmitterInterpolatePosition { name: String, value: bool },
 
-    // -- Render layer ---
+    // ─── Render Layer ────────────────────────────────────────────────────
     SetRenderLayer  { target: Target, layer: i32 },
 
-    // -- Camera zoom ---
+    // ─── Camera ──────────────────────────────────────────────────────────
     SetZoom { value: f32 },
     AddZoom { value: f32 },
     /// Smooth zoom transition (lerped). Preferred over SetZoom for animated zoom.
@@ -101,7 +129,7 @@ pub enum Action {
     /// Zoom toward a screen-space point with a multiplicative delta.
     SmoothZoomAt { delta: f32 },
 
-    // -- Camera effects ---
+    // ─── Camera Effects ───────────────────────────────────────────────────
     /// Trigger a camera shake. intensity = world-space pixels, duration = seconds.
     CameraShake { intensity: f32, duration: f32 },
     /// Trigger a screen flash. Color fades out over duration seconds.
@@ -115,7 +143,7 @@ pub enum Action {
     /// Zoom punch — a quick additive zoom pop that decays.
     CameraZoomPunch { amount: f32, duration: f32 },
 
-    // -- Planet gravity actions ---
+    // ─── Planet Gravity ───────────────────────────────────────────────────
     SetGravityStrength { target: Target, value: f32 },
     SetPlanetRadius    { target: Target, value: f32 },
     SetGravityTarget   { target: Target, tag: String },
@@ -123,32 +151,28 @@ pub enum Action {
     SetGravityFalloff  { target: Target, falloff: crate::types::GravityFalloff },
     SetGravityAllSources { target: Target, enabled: bool },
 
-    // -- Slope alignment ---
+    // ─── Slope Alignment ──────────────────────────────────────────────────
     /// Enable/disable slope alignment (flush/slide-like rotation on slopes).
     SetAlignToSlope      { target: Target, enabled: bool },
     /// Set the rotation speed for slope alignment (degrees per frame).
     SetAlignToSlopeSpeed { target: Target, value: f32 },
 
-    // -- Grapple / constraint actions ---
-    /// Attach a grapple constraint to a target object.
-    AttachGrapple   { target: Target, grapple: GrappleConstraint },
-    /// Release (remove) the grapple from a target object.
-    ReleaseGrapple  { target: Target },
-    /// Set the rope length of an active grapple.
-    SetGrappleLength    { target: Target, value: f32 },
-    /// Set the stiffness of an active grapple (0.0–1.0).
-    SetGrappleStiffness { target: Target, value: f32 },
-    /// Set the damping of an active grapple (0.0–1.0).
-    SetGrappleDamping   { target: Target, value: f32 },
-    /// Move the anchor of an active grapple to a new world position.
-    SetGrappleAnchor    { target: Target, x: f32, y: f32 },
-    /// Re-target the grapple anchor to follow a named object.
-    SetGrappleAnchorObject { target: Target, anchor_object: String },
-    /// Set the swing bias of an active grapple.
-    SetGrappleSwingBias { target: Target, bias: SwingBias },
+    // ─── Plugin System ────────────────────────────────────────────────────
+    /// Dispatch a named action payload to the plugin registered under `name`.
+    /// The plugin's `on_action` handler receives the `data` string and returns
+    /// whether it was handled. Silently ignored if no matching plugin is found.
+    RunPlugin { name: String, data: String },
+    /// Dispatch a typed command payload to a plugin via on_call.
+    /// The payload is wrapped in Arc<dyn Any> — plugins downcast to their command type.
+    /// Silently ignored if no matching plugin is found or plugin does not handle the call.
+    PluginCall { name: String, payload: Arc<dyn std::any::Any + Send + Sync> },
 }
 
 impl Action {
+    /// Dispatch a string action to a named plugin.
+    pub fn run_plugin(name: impl Into<String>, data: impl Into<String>) -> Self {
+        Action::RunPlugin { name: name.into(), data: data.into() }
+    }
     pub fn expr(s: impl Into<String>) -> Self { Action::Expr(s.into()) }
 
     pub fn expr_checked(s: impl Into<String>) -> Result<Self, String> {
@@ -295,6 +319,30 @@ impl Action {
     pub fn set_emitter_render_layer(name: impl Into<String>, value: i32) -> Self {
         Action::SetEmitterRenderLayer { name: name.into(), value }
     }
+    /// Fade particle size from spawn size to `value` over lifetime. Use `0.0` to taper to nothing.
+    pub fn set_emitter_size_end(name: impl Into<String>, value: f32) -> Self {
+        Action::SetEmitterSizeEnd { name: name.into(), value }
+    }
+    /// Fade particle colour to `(r,g,b,a)` over lifetime.
+    pub fn set_emitter_color_end(name: impl Into<String>, r: u8, g: u8, b: u8, a: u8) -> Self {
+        Action::SetEmitterColorEnd { name: name.into(), value: Some((r, g, b, a)) }
+    }
+    /// Clear any colour-end fade.
+    pub fn clear_emitter_color_end(name: impl Into<String>) -> Self {
+        Action::SetEmitterColorEnd { name: name.into(), value: None }
+    }
+    /// Set the rendered shape for newly emitted particles.
+    pub fn set_emitter_shape(name: impl Into<String>, shape: ParticleShape) -> Self {
+        Action::SetEmitterShape { name: name.into(), value: shape }
+    }
+    /// When `true`, particles auto-rotate to face their velocity each frame.
+    pub fn set_emitter_align_to_velocity(name: impl Into<String>, value: bool) -> Self {
+        Action::SetEmitterAlignToVelocity { name: name.into(), value }
+    }
+    /// When `true`, particles are spread along the emitter's per-frame path.
+    pub fn set_emitter_interpolate_position(name: impl Into<String>, value: bool) -> Self {
+        Action::SetEmitterInterpolatePosition { name: name.into(), value }
+    }
     pub fn set_render_layer(target: Target, layer: i32) -> Self {
         Action::SetRenderLayer { target, layer }
     }
@@ -351,37 +399,5 @@ impl Action {
     }
     pub fn set_align_to_slope_speed(target: Target, value: f32) -> Self {
         Action::SetAlignToSlopeSpeed { target, value }
-    }
-
-    // -- Grapple convenience constructors --
-    pub fn attach_grapple(target: Target, grapple: GrappleConstraint) -> Self {
-        Action::AttachGrapple { target, grapple }
-    }
-    pub fn attach_grapple_at(target: Target, anchor: (f32, f32), length: f32) -> Self {
-        Action::AttachGrapple { target, grapple: GrappleConstraint::at_point(anchor, length) }
-    }
-    pub fn attach_grapple_to(target: Target, anchor_object: impl Into<String>, length: f32) -> Self {
-        Action::AttachGrapple { target, grapple: GrappleConstraint::to_object(anchor_object, length) }
-    }
-    pub fn release_grapple(target: Target) -> Self {
-        Action::ReleaseGrapple { target }
-    }
-    pub fn set_grapple_length(target: Target, value: f32) -> Self {
-        Action::SetGrappleLength { target, value }
-    }
-    pub fn set_grapple_stiffness(target: Target, value: f32) -> Self {
-        Action::SetGrappleStiffness { target, value }
-    }
-    pub fn set_grapple_damping(target: Target, value: f32) -> Self {
-        Action::SetGrappleDamping { target, value }
-    }
-    pub fn set_grapple_anchor(target: Target, x: f32, y: f32) -> Self {
-        Action::SetGrappleAnchor { target, x, y }
-    }
-    pub fn set_grapple_anchor_object(target: Target, anchor_object: impl Into<String>) -> Self {
-        Action::SetGrappleAnchorObject { target, anchor_object: anchor_object.into() }
-    }
-    pub fn set_grapple_swing_bias(target: Target, bias: SwingBias) -> Self {
-        Action::SetGrappleSwingBias { target, bias }
     }
 }

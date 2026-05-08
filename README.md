@@ -28,6 +28,8 @@ It is designed for projects where you own the full screen and want direct contro
 
 **The tick loop** runs at ~60 Hz and fires in a fixed order each frame: `on_update` callbacks → input events → object update (gravity, position, animation) → physics step → camera transform.
 
+**Plugins** are optional, self-contained modules that run inside the tick loop. Each plugin implements the `QuartzPlugin` trait and is registered via `canvas.add_plugin(...)`. Game code dispatches typed commands to plugins via `Action::PluginCall`. Plugins are independently maintained and are not guaranteed to be installed in a default Quartz checkout. Each plugin lives under `src/plugin/` when installed and should document itself in its own README.
+
 ---
 
 ## Capabilities
@@ -36,7 +38,9 @@ It is designed for projects where you own the full screen and want direct contro
 
 **Input** — Mouse (press, release, move, scroll) and keyboard callbacks with full modifier key support.
 
-**Physics** — Crystalline, an impulse-based rigid body solver. Configurable presets (platformer, arcade, realistic). Particle emitters with named presets (fire, sparks, smoke, explosion, and more). Planet gravity with linear and inverse-square falloff.
+**Physics** — Crystalline, an impulse-based rigid body solver. Configurable presets (platformer, arcade, realistic). Particle emitters with named presets (fire, sparks, smoke, explosion, and more). Emitters support per-particle shape (`Circle`, `Ellipse`, `Square`, `Rect`, `Soft`), size and color animation over lifetime, velocity-aligned rotation, and sub-frame position interpolation to fill gaps at high speed. Planet gravity with linear and inverse-square falloff.
+
+**Plugins** — The `QuartzPlugin` trait lets you extend the engine with custom tick-loop hooks (`on_update`, `on_post_update`, `on_post_solve`) and typed command dispatch (`Action::PluginCall`). Plugin packages are optional and external to the Quartz core docs; consult each installed plugin's README for plugin-specific commands and APIs.
 
 **Camera** — Follows a target object with configurable lerp speed. Smooth zoom with cursor-anchored pivot. World↔screen coordinate conversion.
 
