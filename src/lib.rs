@@ -25,7 +25,6 @@ pub use prism::Context;
 pub use prism::canvas::{ShapeType, Image, Text, Span, Align, Font, Color};
 pub use prism::event::{Key, NamedKey};
 
-
 pub use types::{
     Action, Condition, GameEvent,
     Target, Location, Anchor,
@@ -33,7 +32,8 @@ pub use types::{
     GlowConfig, HighlightEffect,
     MouseButton, ScrollAxis,
     ConditionOps,
-    GravityFalloff,    ScreenPin,};
+    GravityFalloff, ScreenPin,
+};
 
 pub use canvas::{Canvas, CanvasMode, CanvasLayout};
 pub use canvas::helpers::{orbit_speed, escape_speed};
@@ -78,10 +78,12 @@ pub use rounded_box::{
     rounded_box, rounded_box_outline, rounded_box_bordered, rounded_box_gradient,
 };
 
+#[cfg(feature = "plugin_grapple")]
 pub use plugin::grapple::{
     GrappleConstraint, GrappleCorrection, DistanceConstraint, SpringConstraint,
     SwingBias, solve_distance_constraint,
 };
+
 pub use assets::ImageCache;
 pub use entropy::Entropy;
 pub use lerp::Lerp;
@@ -108,7 +110,8 @@ pub mod prelude {
         GlowConfig, HighlightEffect,
         MouseButton, ScrollAxis,
         ConditionOps,
-        GravityFalloff,        ScreenPin,    };
+        GravityFalloff, ScreenPin,
+    };
 
     pub use crate::canvas::{Canvas, CanvasMode, CanvasLayout};
     pub use crate::canvas::helpers::{orbit_speed, escape_speed};
@@ -153,6 +156,7 @@ pub mod prelude {
         rounded_box, rounded_box_outline, rounded_box_bordered, rounded_box_gradient,
     };
 
+    #[cfg(feature = "plugin_grapple")]
     pub use crate::plugin::grapple::{
         GrappleConstraint, GrappleCorrection, DistanceConstraint, SpringConstraint,
         SwingBias, solve_distance_constraint,

@@ -105,14 +105,16 @@
 //!   available via `use quartz::prelude::*` already.
 
 // ── Sub-modules ──────────────────────────────────────────────────────────────
-
-/// Background generation and layer compositing.
+#[cfg(feature = "plugin_background")]
 pub mod background;
-/// Pixel-outline SAT collision — terrain, groups, dynamic objects, outline cache.
+
+#[cfg(feature = "plugin_terrain_collision")]
 pub mod terrain_collision;
-/// Versioned JSON save / load.
+
+#[cfg(feature = "plugin_save_game")]
 pub mod save_game;
-/// Grapple, rope, and spring constraint types.
+
+#[cfg(feature = "plugin_grapple")]
 pub mod grapple;
 
 use super::canvas::Canvas;
