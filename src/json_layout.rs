@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use crate::canvas::Canvas;
 use crate::object::GameObject;
 use crate::sprite::tint_overlay;
-use crate::rounded_box::RoundedBox;
 use prism::canvas::{Align, Color, Font, Span, Text};
 use crate::Arc;
 
@@ -481,23 +480,6 @@ fn apply_props(
             .and_then(|v| v.as_f64())
             .map(|v| v as f32)
             .unwrap_or(0.0);
-
-        // Scale border width by virtual_scale before querying the object size.
-        let scaled_bw = bw * cv.virtual_scale();
-
-        if let Some(obj) = cv.get_game_object_mut(target) {
-            let (w, h) = obj.size;
-            let img = if scaled_bw > 0.0 || has_bc {
-                RoundedBox::new(w, h)
-                    .radius((w.min(h) * 0.15).max(2.0))
-                    .color(color)
-                    .border(scaled_bw.max(1.0), bc)
-                    .build()
-            } else {
-                tint_overlay(w, h, color)
-            };
-            obj.set_image(img);
-        }
     }
 
     let text_str = resolved_text.or_else(|| props.get("text").and_then(|v| v.as_str()));
@@ -551,29 +533,6 @@ fn spawn_object(cv: &mut Canvas, def: &serde_json::Value, fonts: &HashMap<String
         "rect" => {
             let color = jcolor(def, "color", Color(0, 0, 0, 255));
             let img   = tint_overlay(w, h, color);
-
-            let mut b = GameObject::build(id)
-                .size(w, h)
-                .layer(layer)
-                .image(img);
-
-            b = apply_positioning(b, def, fill, iz, pin, pin_off_x, pin_off_y, w, h, vw, vh, scale);
-            let mut obj = b.finish();
-            obj.visible = visible;
-            cv.add_game_object(id.to_string(), obj);
-        }
-
-        "rounded_rect" => {
-            let color = jcolor(def, "color", Color(10, 10, 10, 255));
-            let r     = (jf32(def, "radius", 8.0) * scale).min(h / 2.0).min(w / 2.0);
-            let bw    = jf32(def, "border_width", 0.0) * scale;
-            let bc    = jcolor(def, "border_color", Color(50, 50, 50, 255));
-
-            let img = if bw > 0.0 {
-                RoundedBox::new(w, h).radius(r).color(color).border(bw, bc).build()
-            } else {
-                RoundedBox::new(w, h).radius(r).color(color).build()
-            };
 
             let mut b = GameObject::build(id)
                 .size(w, h)

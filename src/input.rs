@@ -145,6 +145,14 @@ fn is_modifier_key(key: &Key) -> bool {
     ))
 }
 
+fn prism_btn_to_local(btn: prism::event::MouseButton) -> MouseButton {
+    match btn {
+        prism::event::MouseButton::Left   => MouseButton::Left,
+        prism::event::MouseButton::Right  => MouseButton::Right,
+        prism::event::MouseButton::Middle => MouseButton::Middle,
+    }
+}
+
 impl Canvas {
     pub fn on_key_press(&mut self, cb: impl FnMut(&mut Canvas, &Key) + Clone + 'static) {
         self.input.press_callbacks.push(Box::new(cb));
@@ -266,7 +274,7 @@ impl Canvas {
         match evt.state {
             PrismMouseState::Pressed => {
                 self.mouse.position = Some(vpos);
-                let btn = MouseButton::Left;
+                let btn = evt.button.map(prism_btn_to_local).unwrap_or(MouseButton::Left);
                 let mut cbs = std::mem::take(&mut self.mouse.press_callbacks);
                 for cb in cbs.iter_mut() { cb(self, btn, vpos); }
                 self.mouse.press_callbacks = cbs;
@@ -274,7 +282,7 @@ impl Canvas {
             }
             PrismMouseState::Released => {
                 self.mouse.position = Some(vpos);
-                let btn = MouseButton::Left;
+                let btn = evt.button.map(prism_btn_to_local).unwrap_or(MouseButton::Left);
                 let mut cbs = std::mem::take(&mut self.mouse.release_callbacks);
                 for cb in cbs.iter_mut() { cb(self, btn, vpos); }
                 self.mouse.release_callbacks = cbs;

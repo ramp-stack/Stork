@@ -140,6 +140,28 @@ pub(crate) fn generate_planet_rgba(radius: u32, r: u8, g: u8, b: u8, brightness_
 }
 
 pub fn load_image(bytes: &[u8]) -> Image {
+    // Try SVG first
+    if bytes.starts_with(b"<svg") || bytes.starts_with(b"<?xml") 
+        || bytes.windows(4).take(64).any(|w| w == b"<svg") 
+    {
+        let options = resvg::usvg::Options::default();
+        if let Ok(tree) = resvg::usvg::Tree::from_data(bytes, &options) {
+            let w = tree.size().width();
+            let h = tree.size().height();
+            if let Some(mut pixmap) = resvg::tiny_skia::Pixmap::new(w as u32, h as u32) {
+                let transform = resvg::tiny_skia::Transform::identity();
+                resvg::render(&tree, transform, &mut pixmap.as_mut());
+                if let Some(rgba) = RgbaImage::from_raw(w as u32, h as u32, pixmap.take()) {
+                    return Image {
+                        shape: ShapeType::Rectangle(0.0, (w, h), 0.0),
+                        image: rgba.into(),
+                        color: None,
+                    };
+                }
+            }
+        }
+    }
+
     let rgba = image::load_from_memory(bytes)
         .expect("quartz: failed to decode image")
         .into_rgba8();
@@ -148,6 +170,27 @@ pub fn load_image(bytes: &[u8]) -> Image {
 }
 
 pub fn load_image_sized(bytes: &[u8], w: f32, h: f32) -> Image {
+    if bytes.starts_with(b"<svg") || bytes.starts_with(b"<?xml")
+        || bytes.windows(4).take(64).any(|w| w == b"<svg")
+    {
+        let options = resvg::usvg::Options::default();
+        if let Ok(tree) = resvg::usvg::Tree::from_data(bytes, &options) {
+            if let Some(mut pixmap) = resvg::tiny_skia::Pixmap::new(w as u32, h as u32) {
+                let scale_x = w / tree.size().width();
+                let scale_y = h / tree.size().height();
+                let transform = resvg::tiny_skia::Transform::from_scale(scale_x, scale_y);
+                resvg::render(&tree, transform, &mut pixmap.as_mut());
+                if let Some(rgba) = RgbaImage::from_raw(w as u32, h as u32, pixmap.take()) {
+                    return Image {
+                        shape: ShapeType::Rectangle(0.0, (w, h), 0.0),
+                        image: rgba.into(),
+                        color: None,
+                    };
+                }
+            }
+        }
+    }
+
     let rgba = image::load_from_memory(bytes)
         .expect("quartz: failed to decode image")
         .into_rgba8();

@@ -13,7 +13,6 @@ pub mod scroll;
 pub mod canvas;
 pub(crate) mod file_watcher;
 pub mod expr;
-pub mod rounded_box;
 pub mod assets;
 pub mod timer;
 pub mod json_layout;
@@ -72,11 +71,7 @@ pub use crystalline::{
     Emitter, EmitterBuilder, Particle, CollisionResponse, ParticleShape,
 };
 
-pub use rounded_box::{
-    RoundedBox, RoundedBoxBuilder, BorderStyle, Shadow,
-    GradientDirection, CornerRadius,
-    rounded_box, rounded_box_outline, rounded_box_bordered, rounded_box_gradient,
-};
+
 
 #[cfg(feature = "plugin_grapple")]
 pub use plugin::grapple::{
@@ -148,12 +143,6 @@ pub mod prelude {
         CrystallinePhysics, PhysicsBody, PhysicsStepResult, BodyUpdate,
         ParticleSystem, ParticleState, ParticleStepResult,
         Emitter, EmitterBuilder, Particle, CollisionResponse, ParticleShape,
-    };
-
-    pub use crate::rounded_box::{
-        RoundedBox, RoundedBoxBuilder, BorderStyle, Shadow,
-        GradientDirection, CornerRadius,
-        rounded_box, rounded_box_outline, rounded_box_bordered, rounded_box_gradient,
     };
 
     #[cfg(feature = "plugin_grapple")]

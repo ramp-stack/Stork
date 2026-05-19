@@ -1841,39 +1841,6 @@ USAGE EXAMPLE
   scroll.state().get_mut().clear_intent();
 
 
---------
-rounded_box.rs
--------
-// ============================================================================
-// QUARTZ ROUNDED BOX API
-// ============================================================================
-// Complete API for creating rounded rectangles with borders, gradients,
-// shadows, and advanced styling options.
-//
-// PERFORMANCE NOTES:
-//   - Simple solid rounded boxes use ShapeType::RoundedRectangle for
-//     efficient GPU rendering and can be redrawn every frame with different
-//     colors without performance penalty.
-//   - Boxes with borders, gradients, or shadows use pixel-based rendering,
-//     which is slower and creates static images. Best used for UI elements
-//     that don't change every frame.
-//
-// USAGE:
-//   // Efficient (can change color per-frame):
-//   let box_img = RoundedBox::solid(200.0, 100.0, 12.0, color);
-//   let box_img = rounded_box(200.0, 100.0, 12.0, color);
-//
-//   // Feature-rich (borders, gradients, shadows - static):
-//   let box_img = RoundedBox::new(200.0, 100.0)
-//       .radius(8.0)
-//       .color(Color(255, 255, 255, 255))
-//       .border(2.0, Color(0, 0, 0, 255))
-//       .shadow(Shadow::soft())
-//       .build();
-//
-// ============================================================================
-
-
 --------------------------------------------------------------------------------
   MODULE: json_layout  (json_layout.rs)
 --------------------------------------------------------------------------------
