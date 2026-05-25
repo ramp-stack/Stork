@@ -73,7 +73,7 @@ pub use crystalline::{
 
 
 
-#[cfg(feature = "plugin_grapple")]
+#[cfg(plugin_grapple)]
 pub use plugin::grapple::{
     GrappleConstraint, GrappleCorrection, DistanceConstraint, SpringConstraint,
     SwingBias, solve_distance_constraint,
@@ -145,7 +145,7 @@ pub mod prelude {
         Emitter, EmitterBuilder, Particle, CollisionResponse, ParticleShape,
     };
 
-    #[cfg(feature = "plugin_grapple")]
+    #[cfg(plugin_grapple)]
     pub use crate::plugin::grapple::{
         GrappleConstraint, GrappleCorrection, DistanceConstraint, SpringConstraint,
         SwingBias, solve_distance_constraint,

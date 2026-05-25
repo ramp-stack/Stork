@@ -119,6 +119,18 @@ impl Canvas {
         self.plugin_registry.plugins.retain(|p| p.name() != name);
     }
 
+    /// Returns a shared reference to a registered plugin by concrete type.
+    pub fn get_plugin<T: 'static>(&self) -> Option<&T> {
+        self.plugin_registry.plugins.iter()
+            .find_map(|plugin| plugin.as_any().downcast_ref::<T>())
+    }
+
+    /// Returns a mutable reference to a registered plugin by concrete type.
+    pub fn get_plugin_mut<T: 'static>(&mut self) -> Option<&mut T> {
+        self.plugin_registry.plugins.iter_mut()
+            .find_map(|plugin| plugin.as_any_mut().downcast_mut::<T>())
+    }
+
     pub fn add_game_object(&mut self, name: String, obj: GameObject) {
         let position = obj.position;
         self.layout.offsets.push(position);
