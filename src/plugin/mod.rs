@@ -42,15 +42,18 @@
 //!   mod.rs                  ← pub struct MyPlugin, impl QuartzPlugin, pub enum MyCommand
 //! ```
 //!
-//! Add to this file:
-//! ```rust
-//! // ── Sub-modules ──────────────
-//! pub mod my_plugin;
-//! ```
-//! And add a line to the `## Plugins` list in the module doc above.
+//! `build.rs` auto-detects any sub-directory containing `mod.rs` and
+//! declares it as a conditional module. **No changes to this file or
+//! `Cargo.toml` are needed** — just clone the plugin repo into
+//! `src/plugin/<name>/` and rebuild.
 //!
 //! If you need the plugin's public types available via `use quartz::prelude::*`,
-//! re-export them in `quartz/src/lib.rs` under the prelude section.
+//! add a guarded re-export in `quartz/src/lib.rs`:
+//! ```rust
+//! #[cfg(plugin_my_plugin)]
+//! pub use crate::plugin::my_plugin::MyPluginType;
+//! ```
+//! And optionally add a line to the `## Plugins` list in the module doc above.
 //!
 //! ### Standard command pattern
 //!
@@ -104,18 +107,9 @@
 //!   re-exported in `src/lib.rs`. The `QuartzPlugin` trait itself is
 //!   available via `use quartz::prelude::*` already.
 
-// ── Sub-modules ──────────────────────────────────────────────────────────────
-#[cfg(feature = "plugin_background")]
-pub mod background;
-
-#[cfg(feature = "plugin_terrain_collision")]
-pub mod terrain_collision;
-
-#[cfg(feature = "plugin_save_game")]
-pub mod save_game;
-
-#[cfg(feature = "plugin_grapple")]
-pub mod grapple;
+// ── Sub-modules (auto-detected by build.rs — add a plugin by cloning it into
+// src/plugin/<name>/ with a mod.rs; no edits here or in Cargo.toml required) ──
+include!(concat!(env!("OUT_DIR"), "/plugin_mods.rs"));
 
 use super::canvas::Canvas;
 
@@ -190,6 +184,12 @@ pub trait QuartzPlugin {
     /// The default implementation always returns `false`.
     #[allow(unused_variables)]
     fn on_call(&mut self, canvas: &mut Canvas, payload: &dyn std::any::Any) -> bool { false }
+
+    /// Returns `self` as `&dyn Any` to allow downcasting via [`Canvas::get_plugin`].
+    fn as_any(&self) -> &dyn std::any::Any;
+
+    /// Returns `self` as `&mut dyn Any` to allow mutable downcasting via [`Canvas::get_plugin_mut`].
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
 }
 
 // ── Internal registry ────────────────────────────────────────────────────────
