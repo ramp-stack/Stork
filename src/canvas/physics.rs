@@ -361,34 +361,6 @@ impl Canvas {
             }
         }
     }
-
-    pub(crate) fn process_hot_reloads(&mut self, delta_time: f32) {
-        self.hot_reload_timer += delta_time;
-        if self.hot_reload_timer < 0.5 { return; }
-        self.hot_reload_timer = 0.0;
-
-        let changed: Vec<(usize, Vec<u8>)> = self.file_watchers
-            .iter_mut()
-            .enumerate()
-            .filter_map(|(i, w)| {
-                let meta  = std::fs::metadata(&w.path).ok()?;
-                let mtime = meta.modified().ok()?;
-                if Some(mtime) == w.mtime { return None; }
-                w.mtime = Some(mtime);
-                match std::fs::read(&w.path) {
-                    Ok(bytes) => Some((i, bytes)),
-                    Err(e)    => { eprintln!("[hot-reload] read '{}': {e}", w.path); None }
-                }
-            })
-            .collect();
-
-        for (i, bytes) in changed {
-            let mut watcher = self.file_watchers[i].clone();
-            watcher.handler.call(self, &bytes);
-            self.file_watchers[i] = watcher;
-            println!("[hot-reload] file reloaded: {}", self.file_watchers[i].path);
-        }
-    }
 }
 
 // -- Free helpers -------------------------------------------------------------

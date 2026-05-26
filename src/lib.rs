@@ -11,18 +11,20 @@ pub mod store;
 pub mod input;
 pub mod scroll;
 pub mod canvas;
-pub(crate) mod file_watcher;
 pub mod expr;
 pub mod assets;
 pub mod timer;
 pub mod json_layout;
 pub mod plugin;
+pub mod shared;
 
 pub use std::sync::Arc;
 
 pub use prism::Context;
 pub use prism::canvas::{ShapeType, Image, Text, Span, Align, Font, Color};
 pub use prism::event::{Key, NamedKey};
+
+pub use shared::{Shared, SourceSettings, FromSource};
 
 pub use types::{
     Action, Condition, GameEvent,
@@ -71,8 +73,6 @@ pub use crystalline::{
     Emitter, EmitterBuilder, Particle, CollisionResponse, ParticleShape,
 };
 
-
-
 #[cfg(plugin_grapple)]
 pub use plugin::grapple::{
     GrappleConstraint, GrappleCorrection, DistanceConstraint, SpringConstraint,
@@ -82,7 +82,6 @@ pub use plugin::grapple::{
 pub use assets::ImageCache;
 pub use entropy::Entropy;
 pub use lerp::Lerp;
-pub use file_watcher::{Shared, SourceSettings, FromSource};
 
 pub use plugin::QuartzPlugin;
 
@@ -97,6 +96,8 @@ pub mod prelude {
     pub use prism::Context;
     pub use prism::canvas::{ShapeType, Image, Text, Span, Align, Font, Color};
     pub use prism::event::{Key, NamedKey};
+
+    pub use crate::shared::{Shared, SourceSettings, FromSource};
 
     pub use crate::types::{
         Action, Condition, GameEvent,
@@ -154,7 +155,6 @@ pub mod prelude {
     pub use crate::assets::ImageCache;
     pub use crate::entropy::Entropy;
     pub use crate::lerp::Lerp;
-    pub use crate::file_watcher::{Shared, SourceSettings, FromSource};
 
     pub use crate::plugin::QuartzPlugin;
 

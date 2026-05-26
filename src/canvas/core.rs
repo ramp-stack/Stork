@@ -9,7 +9,6 @@ use crate::input::{InputState, MouseState, CallbackStore};
 use crate::scene::SceneManager;
 use crate::camera::Camera;
 use crate::entropy::Entropy;
-use crate::file_watcher;
 use crate::value::Value;
 use crystalline::{CrystallinePhysics, ParticleSystem, ParticleState};
 use crate::plugin::PluginRegistry;
@@ -121,8 +120,6 @@ pub struct Canvas {
     pub(crate) scene_manager:    SceneManager,
     pub(crate) active_camera:    Option<Camera>,
     pub        entropy:          Entropy,
-    pub(crate) hot_reload_timer: f32,
-    pub(crate) file_watchers:    Vec<file_watcher::FileWatcher>,
     pub        game_vars:        HashMap<String, Value>,
     pub(crate) paused:           bool,
     pub(crate) crystalline:               Option<CrystallinePhysics>,

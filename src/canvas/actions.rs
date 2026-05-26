@@ -29,28 +29,26 @@ impl Canvas {
         let virtual_res = mode.virtual_resolution().unwrap_or((0.0, 0.0));
         Self {
             layout: CanvasLayout {
-                offsets:            Vec::new(),
-                particle_offsets:   Vec::new(),
-                sorted_offsets:     Vec::new(),
-                canvas_size:        Cell::new(virtual_res),
+                offsets:             Vec::new(),
+                particle_offsets:    Vec::new(),
+                sorted_offsets:      Vec::new(),
+                canvas_size:         Cell::new(virtual_res),
                 mode,
-                scale:              Cell::new(1.0),
-                safe_area_offset:   Cell::new((0.0, 0.0)),
-                zoom:               Cell::new(1.0),
-                sorted_ignore_zoom: Vec::new(),
-                actual_size:        Cell::new(virtual_res),
+                scale:               Cell::new(1.0),
+                safe_area_offset:    Cell::new((0.0, 0.0)),
+                zoom:                Cell::new(1.0),
+                sorted_ignore_zoom:  Vec::new(),
+                actual_size:         Cell::new(virtual_res),
             },
-            store:            ObjectStore::new(),
-            input:            InputState::new(),
-            mouse:            MouseState::new(),
-            callbacks:        CallbackStore::new(),
-            scene_manager:    SceneManager::new(),
-            active_camera:    None,
-            entropy:          Entropy::new(),
-            hot_reload_timer: 0.0,
-            file_watchers:    Vec::new(),
-            game_vars:        HashMap::new(),
-            paused:           false,
+            store:                     ObjectStore::new(),
+            input:                     InputState::new(),
+            mouse:                     MouseState::new(),
+            callbacks:                 CallbackStore::new(),
+            scene_manager:             SceneManager::new(),
+            active_camera:             None,
+            entropy:                   Entropy::new(),
+            game_vars:                 HashMap::new(),
+            paused:                    false,
             crystalline:               None,
             particle_system:           None,
             last_particle_states:      Vec::new(),
@@ -79,7 +77,6 @@ impl Canvas {
         self.input.held_keys.contains(&k)
     }
 
-    /// Returns the ratio of actual window width to virtual resolution width.
     pub fn virtual_scale(&self) -> f32 {
         let actual = self.layout.actual_size.get();
         match self.layout.mode {
@@ -89,43 +86,32 @@ impl Canvas {
         }
     }
 
-    /// Converts a font size authored in logical screen pixels to virtual canvas pixels.
     pub fn virt_font_size(&self, logical_px: f32) -> f32 {
         logical_px * self.virtual_scale()
     }
 
-    /// Create a Text object with font size automatically scaled to the virtual canvas.
-    /// Pass a font as Arc<Font>, a logical pixel size, a color, and an alignment.
-    /// Scaling is handled automatically — no manual fs multiplication needed.
     pub fn make_text(&self, text: String, font_size: f32, color: Color, align: Align, font: Arc<Font>) -> Text {
         let scaled = font_size * self.virtual_scale();
         Text::new(
             vec![Span::new(text, scaled, Some(scaled * 1.35), font, color, 0.0)],
-            None,
-            align,
-            None,
+            None, align, None,
         )
     }
 
-    /// Register a plugin with this canvas.
-    /// Plugins receive `on_update` and `on_post_update` callbacks every frame.
     pub fn add_plugin(&mut self, mut plugin: impl crate::plugin::QuartzPlugin + 'static) {
         plugin.on_init(self);
         self.plugin_registry.plugins.push(Box::new(plugin));
     }
 
-    /// Remove a registered plugin by name.
     pub fn remove_plugin(&mut self, name: &str) {
         self.plugin_registry.plugins.retain(|p| p.name() != name);
     }
 
-    /// Returns a shared reference to a registered plugin by concrete type.
     pub fn get_plugin<T: 'static>(&self) -> Option<&T> {
         self.plugin_registry.plugins.iter()
             .find_map(|plugin| plugin.as_any().downcast_ref::<T>())
     }
 
-    /// Returns a mutable reference to a registered plugin by concrete type.
     pub fn get_plugin_mut<T: 'static>(&mut self) -> Option<&mut T> {
         self.plugin_registry.plugins.iter_mut()
             .find_map(|plugin| plugin.as_any_mut().downcast_mut::<T>())
@@ -161,8 +147,6 @@ impl Canvas {
             .and_then(move |i| self.store.objects.get_mut(i))
     }
 
-    /// Returns the names of all game objects registered on this canvas.
-    /// Useful for plugins that need to iterate all objects each frame.
     pub fn object_names(&self) -> &[String] {
         &self.store.names
     }
@@ -306,9 +290,7 @@ impl Canvas {
             }
             Action::Expr(src) => {
                 match parse_action(&src) {
-                    Ok(actions) => {
-                        for action in actions { self.run(action); }
-                    }
+                    Ok(actions) => { for action in actions { self.run(action); } }
                     Err(e) => {
                         debug_assert!(false,
                             "[Action::Expr] parse error in \"{src}\": {e}\n\
@@ -329,9 +311,7 @@ impl Canvas {
                 for idx in indices {
                     if let Some(obj) = self.store.objects.get_mut(idx) {
                         obj.slope = Some((left_offset, right_offset));
-                        if auto_rotate {
-                            obj.rotation = obj.rotation_from_slope();
-                        }
+                        if auto_rotate { obj.rotation = obj.rotation_from_slope(); }
                     }
                 }
             }
@@ -353,9 +333,7 @@ impl Canvas {
                         obj.collision_mode = mode.clone();
                         match mode {
                             CollisionMode::NonPlatform => { obj.is_platform = false; }
-                            CollisionMode::Surface | CollisionMode::Solid(_) => {
-                                obj.is_platform = true;
-                            }
+                            CollisionMode::Surface | CollisionMode::Solid(_) => { obj.is_platform = true; }
                         }
                     }
                 }
@@ -399,14 +377,10 @@ impl Canvas {
                 self.store.apply_to_targets(&target, |obj| obj.material.density = value);
             }
             Action::ApplyForce { target, fx, fy } => {
-                for name in self.store.get_names(&target) {
-                    self.apply_physics_force(&name, fx, fy);
-                }
+                for name in self.store.get_names(&target) { self.apply_physics_force(&name, fx, fy); }
             }
             Action::ApplyImpulse { target, ix, iy } => {
-                for name in self.store.get_names(&target) {
-                    self.apply_physics_impulse(&name, ix, iy);
-                }
+                for name in self.store.get_names(&target) { self.apply_physics_impulse(&name, ix, iy); }
             }
             Action::SetPosition { target, x, y } => {
                 let indices = self.store.get_indices(&target);
@@ -435,9 +409,7 @@ impl Canvas {
                     }
                 }
             }
-            Action::WakeBody { target } => {
-                for name in self.store.get_names(&target) { self.wake_body(&name); }
-            }
+            Action::WakeBody   { target } => { for name in self.store.get_names(&target) { self.wake_body(&name); } }
             Action::FreezeBody { target } => {
                 self.store.apply_to_targets(&target, |obj| {
                     obj.momentum = (0.0, 0.0);
@@ -451,122 +423,68 @@ impl Canvas {
             Action::SetCollisionLayer { target, layer } => {
                 self.store.apply_to_targets(&target, |obj| obj.collision_layer = layer);
             }
-            Action::SetPhysicsQuality { quality } => {
-                self.set_physics_quality(quality);
-            }
+            Action::SetPhysicsQuality { quality } => { self.set_physics_quality(quality); }
             Action::EnableCrystalline  => { self.enable_crystalline(); }
             Action::DisableCrystalline => { self.disable_crystalline(); }
-            Action::SpawnEmitter { emitter } => { self.add_emitter(emitter); }
-            Action::RemoveEmitter { name }   => { self.remove_emitter(&name); }
+            Action::SpawnEmitter { emitter }     => { self.add_emitter(emitter); }
+            Action::RemoveEmitter { name }       => { self.remove_emitter(&name); }
             Action::AttachEmitter { emitter_name, target, location } => {
-                if let Some(name) = self.store.get_names(&target).first() {
-                    self.attach_emitter_to(&emitter_name, name);
-                }
-                if let Some(loc) = location {
-                    self.emitter_locations.insert(emitter_name, loc);
-                }
+                if let Some(name) = self.store.get_names(&target).first() { self.attach_emitter_to(&emitter_name, name); }
+                if let Some(loc) = location { self.emitter_locations.insert(emitter_name, loc); }
             }
             Action::DetachEmitter { emitter_name } => {
-                let key = format!("_emitter_bind_{}", emitter_name);
-                self.game_vars.remove(&key);
+                self.game_vars.remove(&format!("_emitter_bind_{}", emitter_name));
                 self.emitter_locations.remove(&emitter_name);
             }
-            Action::SetEmitterRate { name, value } => {
-                if let Some(ps) = &mut self.particle_system { ps.set_emitter_rate(&name, value); }
-            }
-            Action::SetEmitterLifetime { name, value } => {
-                if let Some(ps) = &mut self.particle_system { ps.set_emitter_lifetime(&name, value); }
-            }
-            Action::SetEmitterVelocity { name, value } => {
-                if let Some(ps) = &mut self.particle_system { ps.set_emitter_velocity(&name, value); }
-            }
-            Action::SetEmitterSpread { name, value } => {
-                if let Some(ps) = &mut self.particle_system { ps.set_emitter_spread(&name, value); }
-            }
-            Action::SetEmitterSize { name, value } => {
-                if let Some(ps) = &mut self.particle_system { ps.set_emitter_size(&name, value); }
-            }
-            Action::SetEmitterColor { name, value } => {
-                if let Some(ps) = &mut self.particle_system { ps.set_emitter_color(&name, value); }
-            }
-            Action::SetEmitterGravityScale { name, value } => {
-                if let Some(ps) = &mut self.particle_system { ps.set_emitter_gravity_scale(&name, value); }
-            }
-            Action::SetEmitterCollision { name, value } => {
-                if let Some(ps) = &mut self.particle_system { ps.set_emitter_collision(&name, value); }
-            }
-            Action::SetEmitterRenderLayer { name, value } => {
-                if let Some(ps) = &mut self.particle_system { ps.set_emitter_render_layer(&name, value); }
-            }
-            Action::SetEmitterSizeEnd { name, value } => {
-                if let Some(ps) = &mut self.particle_system { ps.set_emitter_size_end(&name, value); }
-            }
-            Action::SetEmitterColorEnd { name, value } => {
-                if let Some(ps) = &mut self.particle_system { ps.set_emitter_color_end(&name, value); }
-            }
-            Action::SetEmitterShape { name, value } => {
-                if let Some(ps) = &mut self.particle_system { ps.set_emitter_shape(&name, value); }
-            }
-            Action::SetEmitterAlignToVelocity { name, value } => {
-                if let Some(ps) = &mut self.particle_system { ps.set_emitter_align_to_velocity(&name, value); }
-            }
-            Action::SetEmitterInterpolatePosition { name, value } => {
-                if let Some(ps) = &mut self.particle_system { ps.set_emitter_interpolate_position(&name, value); }
-            }
+            Action::SetEmitterRate                 { name, value } => { if let Some(ps) = &mut self.particle_system { ps.set_emitter_rate(&name, value); } }
+            Action::SetEmitterLifetime             { name, value } => { if let Some(ps) = &mut self.particle_system { ps.set_emitter_lifetime(&name, value); } }
+            Action::SetEmitterVelocity             { name, value } => { if let Some(ps) = &mut self.particle_system { ps.set_emitter_velocity(&name, value); } }
+            Action::SetEmitterSpread               { name, value } => { if let Some(ps) = &mut self.particle_system { ps.set_emitter_spread(&name, value); } }
+            Action::SetEmitterSize                 { name, value } => { if let Some(ps) = &mut self.particle_system { ps.set_emitter_size(&name, value); } }
+            Action::SetEmitterColor                { name, value } => { if let Some(ps) = &mut self.particle_system { ps.set_emitter_color(&name, value); } }
+            Action::SetEmitterGravityScale         { name, value } => { if let Some(ps) = &mut self.particle_system { ps.set_emitter_gravity_scale(&name, value); } }
+            Action::SetEmitterCollision            { name, value } => { if let Some(ps) = &mut self.particle_system { ps.set_emitter_collision(&name, value); } }
+            Action::SetEmitterRenderLayer          { name, value } => { if let Some(ps) = &mut self.particle_system { ps.set_emitter_render_layer(&name, value); } }
+            Action::SetEmitterSizeEnd              { name, value } => { if let Some(ps) = &mut self.particle_system { ps.set_emitter_size_end(&name, value); } }
+            Action::SetEmitterColorEnd             { name, value } => { if let Some(ps) = &mut self.particle_system { ps.set_emitter_color_end(&name, value); } }
+            Action::SetEmitterShape                { name, value } => { if let Some(ps) = &mut self.particle_system { ps.set_emitter_shape(&name, value); } }
+            Action::SetEmitterAlignToVelocity      { name, value } => { if let Some(ps) = &mut self.particle_system { ps.set_emitter_align_to_velocity(&name, value); } }
+            Action::SetEmitterInterpolatePosition  { name, value } => { if let Some(ps) = &mut self.particle_system { ps.set_emitter_interpolate_position(&name, value); } }
             Action::SetRenderLayer { target, layer } => {
                 self.store.apply_to_targets(&target, |obj| obj.layer = layer);
                 self.rebuild_render_order();
             }
             Action::SetZoom { value } => {
-                if let Some(cam) = &mut self.active_camera {
-                    cam.zoom        = value.max(0.01);
-                    cam.zoom_target = value.max(0.01);
-                }
+                if let Some(cam) = &mut self.active_camera { cam.zoom = value.max(0.01); cam.zoom_target = value.max(0.01); }
             }
             Action::AddZoom { value } => {
                 if let Some(cam) = &mut self.active_camera {
-                    let new_val = (cam.zoom + value).max(0.01);
-                    cam.zoom        = new_val;
-                    cam.zoom_target = new_val;
+                    let v = (cam.zoom + value).max(0.01); cam.zoom = v; cam.zoom_target = v;
                 }
             }
-            Action::SmoothZoom { value } => {
-                self.smooth_zoom(value);
-            }
-            Action::SmoothZoomAt { delta } => {
-                if let Some(pos) = self.mouse.position {
-                    self.smooth_zoom_at(delta, pos);
-                } else {
-                    self.smooth_zoom(self.get_zoom() * (1.0 + delta));
-                }
+            Action::SmoothZoom    { value }              => { self.smooth_zoom(value); }
+            Action::SmoothZoomAt  { delta }              => {
+                if let Some(pos) = self.mouse.position { self.smooth_zoom_at(delta, pos); }
+                else { self.smooth_zoom(self.get_zoom() * (1.0 + delta)); }
             }
             Action::CameraShake { intensity, duration } => {
-                if let Some(cam) = &mut self.active_camera {
-                    cam.shake(intensity, duration);
-                }
+                if let Some(cam) = &mut self.active_camera { cam.shake(intensity, duration); }
             }
             Action::CameraFlash { color, duration } => {
-                if let Some(cam) = &mut self.active_camera {
-                    cam.flash(color, duration);
-                }
+                if let Some(cam) = &mut self.active_camera { cam.flash(color, duration); }
             }
             Action::CameraFlashWith { color, duration, mode, ease, intensity, freeze_frame } => {
-                if let Some(cam) = &mut self.active_camera {
-                    cam.flash_with(color, duration, mode, ease, intensity, freeze_frame);
-                }
+                if let Some(cam) = &mut self.active_camera { cam.flash_with(color, duration, mode, ease, intensity, freeze_frame); }
             }
             Action::CameraZoomPunch { amount, duration } => {
-                if let Some(cam) = &mut self.active_camera {
-                    cam.zoom_punch(amount, duration);
-                }
+                if let Some(cam) = &mut self.active_camera { cam.zoom_punch(amount, duration); }
             }
             Action::SetGravityStrength { target, value } => {
                 self.store.apply_to_targets(&target, |obj| { obj.gravity_strength = value.max(0.0); });
             }
             Action::SetPlanetRadius { target, value } => {
                 self.store.apply_to_targets(&target, |obj| {
-                    if value > 0.0 { obj.planet_radius = Some(value); }
-                    else           { obj.planet_radius = None; }
+                    obj.planet_radius = if value > 0.0 { Some(value) } else { None };
                 });
             }
             Action::SetGravityTarget { target, tag } => {
@@ -574,53 +492,31 @@ impl Canvas {
                 self.store.apply_to_targets(&target, |obj| { obj.gravity_target = tag_val.clone(); });
             }
             Action::SetGravityInfluenceMult { target, value } => {
-                self.store.apply_to_targets(&target, |obj| {
-                    obj.gravity_influence_mult = value.max(0.01);
-                });
+                self.store.apply_to_targets(&target, |obj| { obj.gravity_influence_mult = value.max(0.01); });
             }
             Action::SetGravityFalloff { target, falloff } => {
-                self.store.apply_to_targets(&target, |obj| {
-                    obj.gravity_falloff = falloff;
-                });
+                self.store.apply_to_targets(&target, |obj| { obj.gravity_falloff = falloff; });
             }
             Action::SetGravityAllSources { target, enabled } => {
-                self.store.apply_to_targets(&target, |obj| {
-                    obj.gravity_all_sources = enabled;
-                });
+                self.store.apply_to_targets(&target, |obj| { obj.gravity_all_sources = enabled; });
             }
-
-            // -- Slope alignment actions --
             Action::SetAlignToSlope { target, enabled } => {
-                self.store.apply_to_targets(&target, |obj| {
-                    obj.align_to_slope = enabled;
-                });
+                self.store.apply_to_targets(&target, |obj| { obj.align_to_slope = enabled; });
             }
             Action::SetAlignToSlopeSpeed { target, value } => {
-                self.store.apply_to_targets(&target, |obj| {
-                    obj.align_to_slope_speed = value.max(0.0);
-                });
+                self.store.apply_to_targets(&target, |obj| { obj.align_to_slope_speed = value.max(0.0); });
             }
-
-            // -- Plugin dispatch --
             Action::RunPlugin { name, data } => {
-                // Take the plugins out, dispatch, then put back.
                 let mut plugins = std::mem::take(&mut self.plugin_registry.plugins);
                 for plugin in &mut plugins {
-                    if plugin.name() == name.as_str() {
-                        plugin.on_action(self, &data);
-                        break;
-                    }
+                    if plugin.name() == name.as_str() { plugin.on_action(self, &data); break; }
                 }
                 self.plugin_registry.plugins = plugins;
             }
             Action::PluginCall { name, payload } => {
-                // Take the plugins out, dispatch, then put back.
                 let mut plugins = std::mem::take(&mut self.plugin_registry.plugins);
                 for plugin in &mut plugins {
-                    if plugin.name() == name.as_str() {
-                        plugin.on_call(self, payload.as_ref());
-                        break;
-                    }
+                    if plugin.name() == name.as_str() { plugin.on_call(self, payload.as_ref()); break; }
                 }
                 self.plugin_registry.plugins = plugins;
             }
@@ -637,16 +533,12 @@ impl Canvas {
     }
 
     pub fn on_update<F>(&mut self, callback: F)
-    where
-        F: FnMut(&mut Canvas) + Clone + 'static,
-    {
+    where F: FnMut(&mut Canvas) + Clone + 'static {
         self.callbacks.tick.push(Box::new(callback));
     }
 
     pub fn register_custom_event<F>(&mut self, name: String, handler: F)
-    where
-        F: FnMut(&mut Canvas) + Clone + 'static,
-    {
+    where F: FnMut(&mut Canvas) + Clone + 'static {
         self.callbacks.custom.insert(name, Box::new(handler));
     }
 
@@ -655,15 +547,10 @@ impl Canvas {
     pub fn camera(&self)     -> Option<&Camera>         { self.active_camera.as_ref() }
     pub fn camera_mut(&mut self) -> Option<&mut Camera> { self.active_camera.as_mut() }
 
-    /// Smoothly transition to a zoom level. No-op if no camera is set.
     pub fn smooth_zoom(&mut self, value: f32) {
-        if let Some(cam) = &mut self.active_camera {
-            cam.smooth_zoom(value);
-        }
+        if let Some(cam) = &mut self.active_camera { cam.smooth_zoom(value); }
     }
 
-    /// Zoom toward a screen-space point (e.g. mouse cursor).
-    /// Converts screen position to world coordinates automatically.
     pub fn smooth_zoom_at(&mut self, delta: f32, screen_pos: (f32, f32)) {
         if let Some(cam) = &mut self.active_camera {
             let world_pt = cam.screen_to_world(screen_pos);
@@ -671,45 +558,32 @@ impl Canvas {
         }
     }
 
-    /// Get current (interpolated) zoom level. Returns 1.0 if no camera is set.
     pub fn get_zoom(&self) -> f32 {
         self.active_camera.as_ref().map(|c| c.zoom).unwrap_or(1.0)
     }
 
-    /// Set the world-space pivot point for zoom operations.
-    /// Pass None to zoom toward the viewport center (default).
     pub fn set_zoom_anchor(&mut self, world_pos: Option<(f32, f32)>) {
-        if let Some(cam) = &mut self.active_camera {
-            cam.zoom_anchor = world_pos;
-        }
+        if let Some(cam) = &mut self.active_camera { cam.zoom_anchor = world_pos; }
     }
 
-    /// Convert a virtual screen position to world space using the active camera.
     pub fn screen_to_world(&self, screen_pos: (f32, f32)) -> (f32, f32) {
-        self.active_camera.as_ref()
-            .map(|cam| cam.screen_to_world(screen_pos))
-            .unwrap_or(screen_pos)
+        self.active_camera.as_ref().map(|cam| cam.screen_to_world(screen_pos)).unwrap_or(screen_pos)
     }
 
-    /// Convert a world position to virtual screen space using the active camera.
     pub fn world_to_screen(&self, world_pos: (f32, f32)) -> (f32, f32) {
-        self.active_camera.as_ref()
-            .map(|cam| cam.world_to_screen(world_pos))
-            .unwrap_or(world_pos)
+        self.active_camera.as_ref().map(|cam| cam.world_to_screen(world_pos)).unwrap_or(world_pos)
     }
 
     pub fn collision_between(&self, t1: &Target, t2: &Target) -> bool {
         let i1 = self.store.get_indices(t1);
         let i2 = self.store.get_indices(t2);
-        i1.iter().any(|&a| {
-            i2.iter().any(|&b| {
-                if a == b { return false; }
-                match (self.store.objects.get(a), self.store.objects.get(b)) {
-                    (Some(o1), Some(o2)) => Self::check_collision(o1, o2),
-                    _ => false,
-                }
-            })
-        })
+        i1.iter().any(|&a| i2.iter().any(|&b| {
+            if a == b { return false; }
+            match (self.store.objects.get(a), self.store.objects.get(b)) {
+                (Some(o1), Some(o2)) => Self::check_collision(o1, o2),
+                _ => false,
+            }
+        }))
     }
 
     pub fn objects_in_radius(&self, game_object: &GameObject, radius_px: f32) -> Vec<&GameObject> {

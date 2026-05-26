@@ -43,11 +43,7 @@ impl OnEvent for Canvas {
             let custom_names: Vec<String> = self.store.events.iter()
                 .flatten()
                 .filter_map(|e| {
-                    if GameEvent::is_custom(e) {
-                        e.custom_name().map(str::to_string)
-                    } else {
-                        None
-                    }
+                    if GameEvent::is_custom(e) { e.custom_name().map(str::to_string) } else { None }
                 })
                 .collect();
 
@@ -58,15 +54,11 @@ impl OnEvent for Canvas {
                 }
             }
 
-            self.process_hot_reloads(DELTA_TIME);
             self.update_objects(DELTA_TIME);
 
-            // ── Plugin on_update hooks (after game-object updates, before physics) ──
             {
                 let mut plugins = std::mem::take(&mut self.plugin_registry.plugins);
-                for plugin in &mut plugins {
-                    plugin.on_update(self, DELTA_TIME);
-                }
+                for plugin in &mut plugins { plugin.on_update(self, DELTA_TIME); }
                 self.plugin_registry.plugins = plugins;
             }
 
@@ -76,18 +68,14 @@ impl OnEvent for Canvas {
                 self.handle_collisions();
             }
 
-            // ── Plugin on_post_update hooks (after physics step) ──────────────────
             {
                 let mut plugins = std::mem::take(&mut self.plugin_registry.plugins);
-                for plugin in &mut plugins {
-                    plugin.on_post_update(self, DELTA_TIME);
-                }
+                for plugin in &mut plugins { plugin.on_post_update(self, DELTA_TIME); }
                 self.plugin_registry.plugins = plugins;
             }
 
             self.handle_planet_landings();
             self.apply_auto_align();
-
             self.apply_camera_transform();
             self.rebuild_particle_visuals();
             self.sync_sorted_offsets();
@@ -108,13 +96,8 @@ impl OnEvent for Canvas {
 }
 
 impl Canvas {
-    pub fn canvas_size(&self) -> (f32, f32) {
-        self.layout.canvas_size.get()
-    }
-
-    pub fn get_virtual_size(&self) -> (f32, f32) {
-        self.layout.canvas_size.get()
-    }
+    pub fn canvas_size(&self) -> (f32, f32) { self.layout.canvas_size.get() }
+    pub fn get_virtual_size(&self) -> (f32, f32) { self.layout.canvas_size.get() }
 
     pub(crate) fn screen_to_virtual(&self, screen_pos: (f32, f32)) -> (f32, f32) {
         let scale = self.layout.scale.get();

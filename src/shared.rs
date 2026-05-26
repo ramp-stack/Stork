@@ -1,7 +1,6 @@
-use crate::Canvas;
-use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::{Cell, Ref, RefCell, RefMut};
+use std::collections::HashMap;
 
 pub struct Shared<T> {
     value:   Rc<RefCell<T>>,
@@ -16,21 +15,44 @@ impl<T> Shared<T> {
         }
     }
 
+    #[track_caller]
     pub fn get(&self) -> Ref<'_, T> {
-        self.value.borrow()
+        let loc = std::panic::Location::caller();
+        match self.value.try_borrow() {
+            Ok(r)  => r,
+            Err(_) => panic!("Shared::get() called while a mut borrow is live.\n  caller: {loc}"),
+        }
     }
 
+    #[track_caller]
     pub fn get_mut(&self) -> RefMut<'_, T> {
-        self.value.borrow_mut()
+        let loc = std::panic::Location::caller();
+        match self.value.try_borrow_mut() {
+            Ok(r)  => r,
+            Err(_) => panic!("Shared::get_mut() called while a borrow is live.\n  caller: {loc}"),
+        }
     }
 
-    pub fn update<F: FnOnce(&mut T)>(&self, f: F) {
-        f(&mut self.value.borrow_mut());
+    pub fn try_get_mut(&self) -> Option<RefMut<'_, T>> {
+        self.value.try_borrow_mut().ok()
     }
 
+    #[track_caller]
     pub fn set(&self, val: T) {
-        *self.value.borrow_mut() = val;
-        self.changed.set(true);
+        let loc = std::panic::Location::caller();
+        match self.value.try_borrow_mut() {
+            Ok(mut v) => { *v = val; self.changed.set(true); }
+            Err(_)    => panic!("Shared::set() called while a borrow is live.\n  caller: {loc}"),
+        }
+    }
+
+    #[track_caller]
+    pub fn update<F: FnOnce(&mut T)>(&self, f: F) {
+        let loc = std::panic::Location::caller();
+        match self.value.try_borrow_mut() {
+            Ok(mut v) => f(&mut v),
+            Err(_)    => panic!("Shared::update() called while a borrow is live.\n  caller: {loc}"),
+        }
     }
 
     pub fn changed(&self) -> bool {
@@ -61,7 +83,6 @@ impl<T: std::fmt::Debug> std::fmt::Debug for Shared<T> {
     }
 }
 
-
 #[derive(Debug, Clone, Default)]
 pub struct SourceSettings {
     strings: HashMap<String, String>,
@@ -75,8 +96,10 @@ impl SourceSettings {
         for raw in src.lines() {
             let line = raw.trim();
             if line.starts_with("//") || line.starts_with("/*") { continue; }
-            let Some((key, rest)) = split_key(line) else { continue };
-            let rest = rest.trim();
+            let Some(colon) = line.find(':') else { continue };
+            let key  = line[..colon].trim();
+            if key.is_empty() || key.contains(' ') || key.contains('"') { continue; }
+            let rest = line[colon + 1..].trim();
 
             if rest.starts_with('"') {
                 if let Some(end) = rest[1..].find('"') {
@@ -84,7 +107,6 @@ impl SourceSettings {
                     continue;
                 }
             }
-
             let num = rest.trim_end_matches(',').trim();
             if !num.contains('.') {
                 if let Ok(v) = num.parse::<usize>() {
@@ -99,48 +121,11 @@ impl SourceSettings {
         out
     }
 
-    pub fn str(&self, key: &str)   -> Option<String> { self.strings.get(key).cloned() }
-    pub fn f32(&self, key: &str)   -> Option<f32>    { self.floats.get(key).copied() }
+    pub fn str(&self,   key: &str) -> Option<String> { self.strings.get(key).cloned() }
+    pub fn f32(&self,   key: &str) -> Option<f32>    { self.floats.get(key).copied() }
     pub fn usize(&self, key: &str) -> Option<usize>  { self.usizes.get(key).copied() }
-}
-
-fn split_key(line: &str) -> Option<(&str, &str)> {
-    let colon = line.find(':')?;
-    let key   = line[..colon].trim();
-    if key.is_empty() || key.contains(' ') || key.contains('"') { return None; }
-    Some((key, &line[colon + 1..]))
 }
 
 pub trait FromSource: Sized {
     fn from_source(p: &SourceSettings) -> Self;
-}
-
-pub(crate) trait FileWatchCallback: 'static {
-    fn call(&mut self, canvas: &mut Canvas, bytes: &[u8]);
-    fn clone_box(&self) -> Box<dyn FileWatchCallback>;
-}
-
-impl<F> FileWatchCallback for F
-where
-    F: FnMut(&mut Canvas, &[u8]) + Clone + 'static,
-{
-    fn call(&mut self, canvas: &mut Canvas, bytes: &[u8]) {
-        (self)(canvas, bytes)
-    }
-    fn clone_box(&self) -> Box<dyn FileWatchCallback> {
-        Box::new(self.clone())
-    }
-}
-
-impl Clone for Box<dyn FileWatchCallback> {
-    fn clone(&self) -> Self {
-        self.as_ref().clone_box()
-    }
-}
-
-#[derive(Clone)]
-pub(crate) struct FileWatcher {
-    pub path:    String,
-    pub mtime:   Option<std::time::SystemTime>,
-    pub handler: Box<dyn FileWatchCallback>,
 }
